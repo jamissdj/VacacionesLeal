@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Vacaciones Liberty LLA · Consulta 2026-08-20</title>
+<title>Vacaciones · Liberty 2026 v8</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
@@ -195,7 +195,6 @@ tbody td{padding:11px 14px;color:#2D3350;}
 
 @media(max-width:1100px){.g2{grid-template-columns:1fr;}.mando-wrap{grid-template-columns:1fr;}}
 </style>
-<style id="public-overrides">.mode-selector{display:none!important}.mando-wrap{grid-template-columns:1fr!important}#tab-mando .mando-wrap>div:last-child{display:none!important}#panel-cons button[onclick*="eliminarSolicitud"]{display:none!important}#panel-cons button[onclick*="agregarFechasHistorico"]{display:none!important}#panel-cons button[onclick*="guardarFechasHistorico"]{display:none!important}#panel-cons .filter-reset{display:none!important}</style>
 </head>
 <body>
 
@@ -204,7 +203,7 @@ tbody td{padding:11px 14px;color:#2D3350;}
   <div class="hl"><div class="lc"><div class="li"></div></div><div class="lt">LIBERTY<br>LATIN<br>AMERICA</div></div>
   <div class="hm">
     <strong>Gestión de Vacaciones · Dashboard Pasivo Vacacional</strong>
-    <span>Portal de consulta &nbsp;·&nbsp; <strong style="color:#FFC000;">Datos al 2026-08-20</strong></span>
+    <span>Cuadro de Mando · Ranking · Alertas · Planes de Acción · Cálculo automático en tiempo real</span>
   </div>
   <div class="hr">
     <div class="hdate"><span class="lv"></span><span id="hdr-date">Cargando...</span></div>
@@ -213,7 +212,7 @@ tbody td{padding:11px 14px;color:#2D3350;}
 </div>
 
 <!-- STORAGE BAR -->
-<div class="storage-bar" style="display:none">
+<div class="storage-bar">
   <div class="sb-status">
     <div class="sb-dot none" id="sb-dot"></div>
     <span class="sb-label">Almacenamiento:</span>
@@ -236,8 +235,10 @@ tbody td{padding:11px 14px;color:#2D3350;}
   <button class="sb-btn sb-btn-export" onclick="exportarEstado()" title="Descargar archivo .json con todos los cambios">⬇ Exportar estado (.json)</button>
   <button class="sb-btn sb-btn-import" onclick="document.getElementById('import-file-input').click()" title="Cargar archivo .json exportado anteriormente">⬆ Importar estado (.json)</button>
   <button class="sb-btn sb-btn-clear" onclick="confirmarBorrarStorage()" title="Eliminar todos los cambios guardados en este navegador">✕ Borrar datos locales</button>
+  <button class="sb-btn" style="background:rgba(255,192,0,.2);color:#FFC000;border:1px solid rgba(255,192,0,.4);" onclick="document.getElementById('sync-personal-input').click()" title="Importar JSON de personal desde el tablero presupuestal y ver cambios detectados">🔁 Sincronizar personal</button>
   <input type="file" id="import-file-input" accept=".json" onchange="importarEstado(event)">
   <input type="file" id="load-excel-input" accept=".xlsx,.xls" onchange="cargarDesdeExcel(event)">
+  <input type="file" id="sync-personal-input" accept=".json" onchange="sincronizarPersonal(event)" style="display:none">
 </div>
 
 <!-- TICKER -->
@@ -257,18 +258,18 @@ tbody td{padding:11px 14px;color:#2D3350;}
 
 <!-- TABS -->
 <div class="tabs">
-  <div class="tab" onclick="ST('mando',this)" style="display:none">🎛️ Cuadro de Mando</div>
-  <div class="tab" onclick="ST('ranking',this)" style="display:none">🏆 Ranking Pasivo</div>
-  <div class="tab active" onclick="ST('alertas',this)">🚨 Alertas</div>
-  <div class="tab" onclick="ST('mando',this)">🔍 Consultar Empleado</div>
+  <div class="tab active" onclick="ST('mando',this)">🎛️ Cuadro de Mando</div>
+  <div class="tab" onclick="ST('ranking',this)">🏆 Ranking Pasivo</div>
+  <div class="tab" onclick="ST('alertas',this)">🚨 Alertas</div>
   <div class="tab" onclick="ST('planes',this)" style="display:none">💡 Planes de Acción</div>
   <div class="tab" onclick="ST('proyeccion',this);renderProyeccion()" style="display:none">📈 Proyección Dic-2026</div>
   <div class="tab" onclick="ST('simulador',this);initSimulador()" style="display:none">🎯 Simulador</div>
-  <div class="tab" onclick="ST('sync',this);initSync()" style="display:none">🔄 Sync Nómina</div>
+  <div class="tab" onclick="ST('sync',this);initSync()">🔄 Sync Nómina</div>
+  <div class="tab" onclick="ST('salarios',this);renderSalarios()">💰 Salarios</div>
 </div>
 
 <!-- ═══════════ TAB 1: CUADRO DE MANDO ═══════════ -->
-<div id="tab-mando" class="tp"><div class="cnt">
+<div id="tab-mando" class="tp active"><div class="cnt">
 
   <div class="mode-selector">
     <button class="mode-btn active" id="mode-btn-vac"  onclick="setMode('vac')">🏖️ Gestión Vacaciones</button>
@@ -651,7 +652,7 @@ tbody td{padding:11px 14px;color:#2D3350;}
 </div></div>
 
 <!-- ═══════════ TAB 3: ALERTAS ═══════════ -->
-<div id="tab-alertas" class="tp active"><div class="cnt">
+<div id="tab-alertas" class="tp"><div class="cnt">
   <div class="sl">FILTROS RÁPIDOS POR JEFE DIRECTO</div>
   <div class="filter-row">
     <label>Jefe directo:</label>
@@ -730,59 +731,59 @@ tbody td{padding:11px 14px;color:#2D3350;}
 // ══════════════════════════════════════════
 const BASE_DATA = [
   // ── NÓMINA ORIGINAL (actualizada al 21-Jul-2026) ──
-  {id:0,  Pais:'COL',Empleado:'ANA MILENA PIAMONTE PALACIO',         TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'ASSOCIATE MANAGER',                    Inicio:'2025-07-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:3.56, AplicaLeal:true,  Leal2025:5},
-  {id:1,  Pais:'COL',Empleado:'ANDRES ENRIQUE MARIN ZAMBRANO',       TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'AI TECH SPECIALIST',                   Inicio:'2025-12-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:2,  Pais:'COL',Empleado:'ANGELA PATRICIA PALACINO CAVIEDES',   TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'SR ANALYST',                           Inicio:'2025-06-03',VT22:0,VT23:0,VT24:0,VT25:0,VT26:1,  DiasTomados2:4.18, AplicaLeal:true,  Leal2025:5},
-  {id:3,  Pais:'COL',Empleado:'ANGIE BRIGGITTE RODRIGUEZ FRANCO',    TipoContrato:'Contrato',   JefeDirecto:'Carlos R',  Cargo:'AI DELIVERY SR. ANALYST',              Inicio:'2025-11-26',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:4,  Pais:'COL',Empleado:'BENJAMIN LEON FIGUEROA',              TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'SENIOR ANALYST, BUSINESS ANALYTICS',   Inicio:'2023-05-15',VT22:0,VT23:2,VT24:15,VT25:9,VT26:20, DiasTomados2:2.90, AplicaLeal:true,  Leal2025:5},
-  {id:5,  Pais:'COL',Empleado:'CAMILO OBERNDORFER MEJIA',            TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'DATA SCIENTIST',                       Inicio:'2024-11-26',VT22:0,VT23:0,VT24:0,VT25:14,VT26:0, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:6,  Pais:'COL',Empleado:'CRISTHIAN CAMILO MARQUEZ ROJAS',      TipoContrato:'Nómina Leal',JefeDirecto:'Carlos R',  Cargo:'DATA QUALITY ANALYST',                 Inicio:'2025-02-01',VT22:0,VT23:0,VT24:0,VT25:4,VT26:1,  DiasTomados2:0.51, AplicaLeal:true,  Leal2025:5},
-  {id:7,  Pais:'COL',Empleado:'DANIEL EDUARDO CASTAÑO OLIVEROS',     TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'SR ANALYST BUSINESS ANALYTICS',        Inicio:'2024-07-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:4.75, AplicaLeal:true,  Leal2025:5},
-  {id:8,  Pais:'COL',Empleado:'DANIEL ROJO SUAREZ',                  TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'NETWORK AND PRODUCT SENIOR MANAGER',   Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:8,  DiasTomados2:1.11, AplicaLeal:true,  Leal2025:5},
-  {id:9,  Pais:'COL',Empleado:'DANILO PLAZAS IREÑO',                 TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'DATA ENGINEER',                        Inicio:'2024-04-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:15, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:10, Pais:'COL',Empleado:'DIANA MELISSA LONDOÑO CELIS',         TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette G',Cargo:'SENIOR BUSINESS ANALYST',              Inicio:'2025-03-01',VT22:0,VT23:0,VT24:0,VT25:10,VT26:6, DiasTomados2:0.89, AplicaLeal:true,  Leal2025:5},
-  {id:11, Pais:'COL',Empleado:'ERICK MAURICIO TRANSLATEUR MARTINEZ', TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'SR MANAGER DATA SCIENCE',              Inicio:'2024-04-08',VT22:0,VT23:0,VT24:0,VT25:0,VT26:11, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:12, Pais:'COL',Empleado:'ERIKA GIOVANNA TORRES CIFUENTES',     TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'IA SPECIALIST (LIBERTY)',              Inicio:'2025-10-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:3.82, AplicaLeal:true,  Leal2025:5},
-  {id:13, Pais:'PAN',Empleado:'FRANCISCO KEHRHAHN PADRON',           TipoContrato:'Contrato',   JefeDirecto:'Jeanette G',Cargo:'MANAGER',                              Inicio:'2024-05-01',VT22:0,VT23:0,VT24:0,VT25:18,VT26:0, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:14, Pais:'COL',Empleado:'GREGORIO PEREZ BERNAL',               TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'DATA ENGINEER',                        Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:6,VT26:0,  DiasTomados2:2.11, AplicaLeal:true,  Leal2025:5},
-  {id:15, Pais:'COL',Empleado:'HERNAN SEBASTIAN TEJADA MORA',        TipoContrato:'Contrato',   JefeDirecto:'Carlos R',  Cargo:'CUSTOMER DATA DEMAND OPS',             Inicio:'2025-01-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:2,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:16, Pais:'COL',Empleado:'JAMIS HERNANDO GARZON PORRAS',        TipoContrato:'Contrato',   JefeDirecto:'Jeanette G',Cargo:'PMO',                                  Inicio:'2026-01-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:17, Pais:'COL',Empleado:'JEAN PAUL RODRIGUEZ MORENO',                 TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'DATA SCIENTIST',                       Inicio:'2024-07-08',VT22:0,VT23:0,VT24:0,VT25:14,VT26:0, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:18, Pais:'COL',Empleado:'JENYFER RIOS SIERRA',                 TipoContrato:'Nómina Leal',JefeDirecto:'Carlos R',  Cargo:'DATA DELIVERY & QUALITY SR ANALYST',   Inicio:'2024-05-01',VT22:0,VT23:0,VT24:0,VT25:7,VT26:2,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:19, Pais:'COL',Empleado:'JONATHAN AURELIO SANDOVAL HERRERA',   TipoContrato:'Nómina Leal',JefeDirecto:'Mauricio',  Cargo:'SR ANALYST',                           Inicio:'2024-12-02',VT22:0,VT23:0,VT24:0,VT25:7,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:20, Pais:'COL',Empleado:'JOSE ALBERTO ZERNA ARMUELLES',        TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'DEVOPS ENGINEER',                      Inicio:'2025-11-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:21, Pais:'COL',Empleado:'JOSE DAVID LARSEN PANTOJA',           TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'NETWORK AND PRODUCT ANALYTICS ANALYST',Inicio:'2026-03-24',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:22, Pais:'COL',Empleado:'JUAN DIEGO VELASQUEZ ANGEL',          TipoContrato:'Nómina Leal',JefeDirecto:'Carlos R',  Cargo:'SR BUSINESS INTELLIGENCE ANALYST',     Inicio:'2024-02-01',VT22:0,VT23:0,VT24:0,VT25:3,VT26:1,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:23, Pais:'COL',Empleado:'JUAN FELIPE CUCALON BALCAZAR',        TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'BUSINESS ANALYTICS ANALYST',           Inicio:'2023-02-01',VT22:0,VT23:0,VT24:1,VT25:5,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:24, Pais:'COL',Empleado:'JULIAN MONSALVE ACEVEDO',             TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'SR ANALYST',                           Inicio:'2024-11-04',VT22:0,VT23:0,VT24:0,VT25:10,VT26:2, DiasTomados2:1.29, AplicaLeal:true,  Leal2025:5},
-  {id:25, Pais:'COL',Empleado:'JULIANA HURTADO CORTES',              TipoContrato:'Nómina Leal',JefeDirecto:'Carlos R',  Cargo:'AI DELIVERY MANAGER',                  Inicio:'2026-02-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:26, Pais:'COL',Empleado:'JULIANA RESTREPO TOBAR',              TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'DATA SCIENTIST',                       Inicio:'2025-12-09',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:4.77, AplicaLeal:true,  Leal2025:5},
-  {id:27, Pais:'COL',Empleado:'LIA MARGARITA GARCIA HENAO',          TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'BUSINESS ANALYTICS ASSOCIATE MANAGER', Inicio:'2023-01-23',VT22:0,VT23:6,VT24:11,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:28, Pais:'COL',Empleado:'MONICA ANDREA VIVEROS BARRERA',       TipoContrato:'Nómina Leal',JefeDirecto:'Carlos R',  Cargo:'DATA SCIENTIST MANAGER',               Inicio:'2022-02-21',VT22:0,VT23:16,VT24:10,VT25:10,VT26:0,DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:29, Pais:'COL',Empleado:'NATALIA JIMENEZ RAMIREZ',             TipoContrato:'Contrato',   JefeDirecto:'Carlos R',  Cargo:'AI STRATEGY & DELIVERY LEAD',          Inicio:'2026-02-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:30, Pais:'MEX',Empleado:'NICOLE CASTRO CAMPOS',                TipoContrato:'Contrato',   JefeDirecto:'Jeanette G',Cargo:'CBM BUSINESS ANALYST OPS',             Inicio:'2024-01-10',VT22:0,VT23:0,VT24:6,VT25:0,VT26:10, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:31, Pais:'COL',Empleado:'PABLO FAJARDO JARAMILLO',             TipoContrato:'Contrato',   JefeDirecto:'Jeanette G',Cargo:'PRESTACIÓN SERVICIOS (LIBERTY)',        Inicio:'2024-12-01',VT22:0,VT23:0,VT24:0,VT25:12,VT26:9, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:32, Pais:'COL',Empleado:'PAOLA CRISTINA GUTIERREZ GIL',        TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'SITE RELIABILITY ENGINEER',            Inicio:'2025-05-26',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:2.07, AplicaLeal:true,  Leal2025:5},
-  {id:33, Pais:'PAN',Empleado:'ROLANDO ESTEBAN RILEY RODRIGUEZ',     TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'JR DATA ENGINEER',                     Inicio:'2025-03-24',VT22:0,VT23:0,VT24:0,VT25:1,VT26:5,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:34, Pais:'COL',Empleado:'SANTIAGO GONZALEZ QUIROZ',            TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'IA MANAGER',                           Inicio:'2025-01-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:5,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:35, Pais:'COL',Empleado:'SANTIAGO MONSALVE ACEVEDO',           TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette G',Cargo:'BUSINESS SPECIALIST',                  Inicio:'2023-03-01',VT22:0,VT23:8,VT24:0,VT25:6,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:36, Pais:'COL',Empleado:'SERGIO ARTURO SIABATO VILLA',               TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'DATA ENGINEER OPS',                    Inicio:'2024-07-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:2,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:0,  Pais:'COL',Empleado:'ANA MILENA PIAMONTE PALACIO',         TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'ASSOCIATE MANAGER',                    Inicio:'2025-07-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:3.56, AplicaLeal:true,  Leal2025:5},
+  {id:1,  Pais:'COL',Empleado:'ANDRES ENRIQUE MARIN ZAMBRANO',       TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'AI TECH SPECIALIST',                   Inicio:'2025-12-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:2,  Pais:'COL',Empleado:'ANGELA PATRICIA PALACINO CAVIEDES',   TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST',                           Inicio:'2025-06-03',VT22:0,VT23:0,VT24:0,VT25:0,VT26:1,  DiasTomados2:4.18, AplicaLeal:true,  Leal2025:5},
+  {id:3,  Pais:'COL',Empleado:'ANGIE BRIGGITTE RODRIGUEZ FRANCO',    TipoContrato:'Contrato',   JefeDirecto:'Carlos Ruíz',  Cargo:'AI DELIVERY SR. ANALYST',              Inicio:'2025-11-26',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:4,  Pais:'COL',Empleado:'BENJAMIN LEON FIGUEROA',              TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SENIOR ANALYST, BUSINESS ANALYTICS',   Inicio:'2023-05-15',VT22:0,VT23:2,VT24:15,VT25:9,VT26:20, DiasTomados2:2.90, AplicaLeal:true,  Leal2025:5},
+  {id:5,  Pais:'COL',Empleado:'CAMILO OBERNDORFER MEJIA',            TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA SCIENTIST',                       Inicio:'2024-11-26',VT22:0,VT23:0,VT24:0,VT25:14,VT26:0, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:6,  Pais:'COL',Empleado:'CRISTHIAN CAMILO MARQUEZ ROJAS',      TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'DATA QUALITY ANALYST',                 Inicio:'2025-02-01',VT22:0,VT23:0,VT24:0,VT25:4,VT26:1,  DiasTomados2:0.51, AplicaLeal:true,  Leal2025:5},
+  {id:7,  Pais:'COL',Empleado:'DANIEL EDUARDO CASTAÑO OLIVEROS',     TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST BUSINESS ANALYTICS',        Inicio:'2024-07-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:4.75, AplicaLeal:true,  Leal2025:5},
+  {id:8,  Pais:'COL',Empleado:'DANIEL ROJO SUAREZ',                  TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'NETWORK AND PRODUCT SENIOR MANAGER',   Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:8,  DiasTomados2:1.11, AplicaLeal:true,  Leal2025:5},
+  {id:9,  Pais:'COL',Empleado:'DANILO PLAZAS IREÑO',                 TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'DATA ENGINEER',                        Inicio:'2024-04-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:15, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:10, Pais:'COL',Empleado:'DIANA MELISSA LONDOÑO CELIS',         TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'SENIOR BUSINESS ANALYST',              Inicio:'2025-03-01',VT22:0,VT23:0,VT24:0,VT25:10,VT26:6, DiasTomados2:0.89, AplicaLeal:true,  Leal2025:5},
+  {id:11, Pais:'COL',Empleado:'ERICK MAURICIO TRANSLATEUR MARTINEZ', TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'SR MANAGER DATA SCIENCE',              Inicio:'2024-04-08',VT22:0,VT23:0,VT24:0,VT25:0,VT26:11, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:12, Pais:'COL',Empleado:'ERIKA GIOVANNA TORRES CIFUENTES',     TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'IA SPECIALIST (LIBERTY)',              Inicio:'2025-10-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:3.82, AplicaLeal:true,  Leal2025:5},
+  {id:13, Pais:'PAN',Empleado:'FRANCISCO KEHRHAHN PADRON',           TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'MANAGER',                              Inicio:'2024-05-01',VT22:0,VT23:0,VT24:0,VT25:18,VT26:0, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:14, Pais:'COL',Empleado:'GREGORIO PEREZ BERNAL',               TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA ENGINEER',                        Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:6,VT26:0,  DiasTomados2:2.11, AplicaLeal:true,  Leal2025:5},
+  {id:15, Pais:'COL',Empleado:'HERNAN SEBASTIAN TEJADA MORA',        TipoContrato:'Contrato',   JefeDirecto:'Carlos Ruíz',  Cargo:'CUSTOMER DATA DEMAND OPS',             Inicio:'2025-01-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:2,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:16, Pais:'COL',Empleado:'JAMIS HERNANDO GARZON PORRAS',        TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'PMO',                                  Inicio:'2026-01-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:17, Pais:'COL',Empleado:'JEAN PAUL RODRIGUEZ MORENO',                 TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA SCIENTIST',                       Inicio:'2024-07-08',VT22:0,VT23:0,VT24:0,VT25:14,VT26:0, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:18, Pais:'COL',Empleado:'JENYFER RIOS SIERRA',                 TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'DATA DELIVERY & QUALITY SR ANALYST',   Inicio:'2024-05-01',VT22:0,VT23:0,VT24:0,VT25:7,VT26:2,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:19, Pais:'COL',Empleado:'JONATHAN AURELIO SANDOVAL HERRERA',   TipoContrato:'Nómina Leal',JefeDirecto:'Mauricio Romero',  Cargo:'SR ANALYST',                           Inicio:'2024-12-02',VT22:0,VT23:0,VT24:0,VT25:7,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:20, Pais:'COL',Empleado:'JOSE ALBERTO ZERNA ARMUELLES',        TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'DEVOPS ENGINEER',                      Inicio:'2025-11-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:21, Pais:'COL',Empleado:'JOSE DAVID LARSEN PANTOJA',           TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'NETWORK AND PRODUCT ANALYTICS ANALYST',Inicio:'2026-03-24',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:22, Pais:'COL',Empleado:'JUAN DIEGO VELASQUEZ ANGEL',          TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'SR BUSINESS INTELLIGENCE ANALYST',     Inicio:'2024-02-01',VT22:0,VT23:0,VT24:0,VT25:3,VT26:1,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:23, Pais:'COL',Empleado:'JUAN FELIPE CUCALON BALCAZAR',        TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'BUSINESS ANALYTICS ANALYST',           Inicio:'2023-02-01',VT22:0,VT23:0,VT24:1,VT25:5,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:24, Pais:'COL',Empleado:'JULIAN MONSALVE ACEVEDO',             TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST',                           Inicio:'2024-11-04',VT22:0,VT23:0,VT24:0,VT25:10,VT26:2, DiasTomados2:1.29, AplicaLeal:true,  Leal2025:5},
+  {id:25, Pais:'COL',Empleado:'JULIANA HURTADO CORTES',              TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'AI DELIVERY MANAGER',                  Inicio:'2026-02-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:26, Pais:'COL',Empleado:'JULIANA RESTREPO TOBAR',              TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA SCIENTIST',                       Inicio:'2025-12-09',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:4.77, AplicaLeal:true,  Leal2025:5},
+  {id:27, Pais:'COL',Empleado:'LIA MARGARITA GARCIA HENAO',          TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'BUSINESS ANALYTICS ASSOCIATE MANAGER', Inicio:'2023-01-23',VT22:0,VT23:6,VT24:11,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:28, Pais:'COL',Empleado:'MONICA ANDREA VIVEROS BARRERA',       TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'DATA SCIENTIST MANAGER',               Inicio:'2022-02-21',VT22:0,VT23:16,VT24:10,VT25:10,VT26:0,DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:29, Pais:'COL',Empleado:'NATALIA JIMENEZ RAMIREZ',             TipoContrato:'Contrato',   JefeDirecto:'Carlos Ruíz',  Cargo:'AI STRATEGY & DELIVERY LEAD',          Inicio:'2026-02-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:30, Pais:'MEX',Empleado:'NICOLE CASTRO CAMPOS',                TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'CBM BUSINESS ANALYST OPS',             Inicio:'2024-01-10',VT22:0,VT23:0,VT24:6,VT25:0,VT26:10, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:31, Pais:'COL',Empleado:'PABLO FAJARDO JARAMILLO',             TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'PRESTACIÓN SERVICIOS (LIBERTY)',        Inicio:'2024-12-01',VT22:0,VT23:0,VT24:0,VT25:12,VT26:9, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:32, Pais:'COL',Empleado:'PAOLA CRISTINA GUTIERREZ GIL',        TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'SITE RELIABILITY ENGINEER',            Inicio:'2025-05-26',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:2.07, AplicaLeal:true,  Leal2025:5},
+  {id:33, Pais:'PAN',Empleado:'ROLANDO ESTEBAN RILEY RODRIGUEZ',     TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'JR DATA ENGINEER',                     Inicio:'2025-03-24',VT22:0,VT23:0,VT24:0,VT25:1,VT26:5,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:34, Pais:'COL',Empleado:'SANTIAGO GONZALEZ QUIROZ',            TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'IA MANAGER',                           Inicio:'2025-01-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:5,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:35, Pais:'COL',Empleado:'SANTIAGO MONSALVE ACEVEDO',           TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'BUSINESS SPECIALIST',                  Inicio:'2023-03-01',VT22:0,VT23:8,VT24:0,VT25:6,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:36, Pais:'COL',Empleado:'SERGIO ARTURO SIABATO VILLA',               TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'DATA ENGINEER OPS',                    Inicio:'2024-07-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:2,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   // ── INGRESOS 2026 ──
-  {id:37, Pais:'COL',Empleado:'ANDRES DANIEL VILLARREAL GOMEZ',      TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-04-13',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:38, Pais:'COL',Empleado:'DANIEL ANDRES MORENO ACEVEDO',        TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-06-05',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:39, Pais:'COL',Empleado:'PABLO REY MORENO',                    TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette G',Cargo:'ANALYST',                              Inicio:'2026-06-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:40, Pais:'COL',Empleado:'NELSON DAVID PACHECO PEREZ',          TipoContrato:'Nómina Leal',JefeDirecto:'Carlos R',  Cargo:'ANALYST',                              Inicio:'2026-06-30',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:41, Pais:'COL',Empleado:'DIANA CAROLINA ZELEDON QUINTERO',     TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette G',Cargo:'ANALYST',                              Inicio:'2026-06-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:42, Pais:'COL',Empleado:'CARLOS FERNANDO TOVAR CERON',         TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-06-10',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:43, Pais:'COL',Empleado:'LUIS ERNESTO VERGARA',                TipoContrato:'Contrato',   JefeDirecto:'Juan R',    Cargo:'ANALYST',                              Inicio:'2026-07-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:44, Pais:'COL',Empleado:'ALEJANDRO PINZON',                    TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-07-14',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:45, Pais:'COL',Empleado:'JOSE DANIEL MIRANDA',                 TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-07-21',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:46, Pais:'COL',Empleado:'ESTEBAN PALACIO',                     TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-07-27',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:47, Pais:'COL',Empleado:'MIGUEL MARTIN LINARES',               TipoContrato:'Contrato',   JefeDirecto:'Juan R',    Cargo:'ANALYST',                              Inicio:'2026-07-21',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:48, Pais:'COL',Empleado:'RODRIGO GONZALEZ',                    TipoContrato:'Contrato',   JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-07-21',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:49, Pais:'COL',Empleado:'JAIME TOLE CLAVIJO',                  TipoContrato:'Nómina Leal',JefeDirecto:'Mauricio',  Cargo:'ANALYST',                              Inicio:'2026-07-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:50, Pais:'COL',Empleado:'LAURA ROMERO',                        TipoContrato:'Nómina Leal',JefeDirecto:'Juan R',    Cargo:'ANALYST',                              Inicio:'2026-08-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
-  {id:51, Pais:'COL',Empleado:'JUAN SEBASTIAN VALENCIA',             TipoContrato:'Nómina Leal',JefeDirecto:'Ivan G',    Cargo:'ANALYST',                              Inicio:'2026-08-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:37, Pais:'COL',Empleado:'ANDRES DANIEL VILLARREAL GOMEZ',      TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-04-13',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:38, Pais:'COL',Empleado:'DANIEL ANDRES MORENO ACEVEDO',        TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-06-05',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:39, Pais:'COL',Empleado:'PABLO REY MORENO',                    TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'ANALYST',                              Inicio:'2026-06-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:40, Pais:'COL',Empleado:'NELSON DAVID PACHECO PEREZ',          TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'ANALYST',                              Inicio:'2026-06-30',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:41, Pais:'COL',Empleado:'DIANA CAROLINA ZELEDON QUINTERO',     TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'ANALYST',                              Inicio:'2026-06-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:42, Pais:'COL',Empleado:'CARLOS FERNANDO TOVAR CERON',         TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-06-10',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:43, Pais:'COL',Empleado:'LUIS ERNESTO VERGARA',                TipoContrato:'Contrato',   JefeDirecto:'Juan David Rodríguez',    Cargo:'ANALYST',                              Inicio:'2026-07-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:44, Pais:'COL',Empleado:'ALEJANDRO PINZON',                    TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-07-14',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:45, Pais:'COL',Empleado:'JOSE DANIEL MIRANDA',                 TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-07-21',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:46, Pais:'COL',Empleado:'ESTEBAN PALACIO',                     TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-07-27',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:47, Pais:'COL',Empleado:'MIGUEL MARTIN LINARES',               TipoContrato:'Contrato',   JefeDirecto:'Juan David Rodríguez',    Cargo:'ANALYST',                              Inicio:'2026-07-21',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:48, Pais:'COL',Empleado:'RODRIGO GONZALEZ',                    TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-07-21',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:49, Pais:'COL',Empleado:'JAIME TOLE CLAVIJO',                  TipoContrato:'Contrato',   JefeDirecto:'Mauricio Romero',  Cargo:'IA TRANSFORMATION CONSULTANT',         Inicio:'2026-07-27',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
+  {id:50, Pais:'COL',Empleado:'LAURA ROMERO',                        TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'ANALYST',                              Inicio:'2026-08-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:51, Pais:'COL',Empleado:'JUAN SEBASTIAN VALENCIA',             TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-08-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
 ];
 
 const ORIGINAL_DATA = BASE_DATA.map(e=>({...e}));
@@ -796,6 +797,63 @@ let overrides = {
   28: {estado:'retirado', fechaRetiro:'2026-04-30'},  // Monica Viveros Barrera
   29: {estado:'retirado', fechaRetiro:'2026-07-17'},  // Natalia Jimenez Ramirez
 };
+// ══════════════════════════════════════════
+// SALARY DATA — extraído de nómina Ago 2026
+// ══════════════════════════════════════════
+const SALARY_DATA = {
+  0: {moneda:"COP",basico:8820000,extralegal:3780000},
+  1: {moneda:"USD",basico:4800,extralegal:0},
+  2: {moneda:"COP",basico:5512500,extralegal:2362500},
+  3: {moneda:"USD",basico:3895,extralegal:0},
+  4: {moneda:"COP",basico:8085000,extralegal:3465000},
+  5: {moneda:"COP",basico:7000000,extralegal:3000000},
+  6: {moneda:"COP",basico:5880000,extralegal:0},
+  7: {moneda:"COP",basico:7415415,extralegal:3178035},
+  8: {moneda:"COP",basico:18597600,extralegal:7970400},
+  9: {moneda:"USD",basico:4613,extralegal:0},
+  10: {moneda:"COP",basico:5635000,extralegal:2415000},
+  11: {moneda:"USD",basico:8011,extralegal:0},
+  12: {moneda:"COP",basico:10290000,extralegal:4410000},
+  13: {moneda:"USD",basico:4851,extralegal:0},
+  14: {moneda:"COP",basico:7350000,extralegal:3150000},
+  15: {moneda:"USD",basico:4408,extralegal:0},
+  16: {moneda:"USD",basico:4000,extralegal:0},
+  17: {moneda:"COP",basico:7350000,extralegal:1050000},
+  18: {moneda:"COP",basico:7525000,extralegal:3225000},
+  19: {moneda:"COP",basico:7700000,extralegal:3300000},
+  20: {moneda:"USD",basico:3075,extralegal:0},
+  21: {moneda:"COP",basico:6650000,extralegal:2850000},
+  22: {moneda:"COP",basico:7525000,extralegal:3225000},
+  23: {moneda:"COP",basico:6825000,extralegal:0},
+  24: {moneda:"COP",basico:7717500,extralegal:3307500},
+  25: {moneda:"COP",basico:14000000,extralegal:6000000},
+  26: {moneda:"COP",basico:7700000,extralegal:3300000},
+  27: {moneda:"COP",basico:9187500,extralegal:3937500},
+  29: {moneda:"USD",basico:0,extralegal:0},
+  30: {moneda:"USD",basico:4500,extralegal:0},
+  31: {moneda:"USD",basico:7625,extralegal:0},
+  32: {moneda:"COP",basico:6615000,extralegal:2835000},
+  33: {moneda:"USD",basico:2050,extralegal:0},
+  34: {moneda:"USD",basico:5600,extralegal:0},
+  35: {moneda:"COP",basico:9310000,extralegal:3990000},
+  36: {moneda:"USD",basico:4200,extralegal:0},
+  37: {moneda:"USD",basico:1900,extralegal:0},
+  38: {moneda:"COP",basico:14000000,extralegal:6000000},
+  39: {moneda:"COP",basico:7700000,extralegal:3300000},
+  40: {moneda:"COP",basico:5880000,extralegal:2520000},
+  41: {moneda:"USD",basico:2100,extralegal:0},
+  42: {moneda:"USD",basico:4500,extralegal:0},
+  43: {moneda:"USD",basico:3300,extralegal:0},
+  44: {moneda:"COP",basico:7700000,extralegal:3300000},
+  45: {moneda:"COP",basico:5600000,extralegal:2400000},
+  46: {moneda:"COP",basico:7700000,extralegal:3300000},
+  47: {moneda:"USD",basico:4500,extralegal:0},
+  48: {moneda:"USD",basico:5500,extralegal:0},
+  49: {moneda:"USD",basico:15000,extralegal:0},
+  50: {moneda:"USD",basico:7692,extralegal:0},
+  51: {moneda:"COP",basico:11000000,extralegal:746667},
+};
+
 let actionLog = [];
 let mandoEstado = 'activo';
 let nuevoLealAplica = false;
@@ -817,7 +875,7 @@ function calcEmployee(base) {
   const today = SYSTEM_DATE;
   const inicio = new Date(base.Inicio);
   const dias = Math.max(0, Math.floor((today - inicio) / 86400000));
-  const ganadas_ley = Math.round(dias * 15 / 365 * 100) / 100;
+  const ganadas_ley = Math.round(dias * 15 / 360 * 100) / 100;
   // Para contratistas: calcular período vigente (desde último aniversario)
   const esContrato = base.TipoContrato === 'Contrato';
   let inicioVigente = inicio; // para contratistas: último aniversario
@@ -832,15 +890,10 @@ function calcEmployee(base) {
     }
     inicioVigente = aniv;
   }
-  // Días leales: Leal2025 es fijo del archivo; Leal2026 se recalcula dinámicamente.
-  // Leal2026 = días desde 2026-01-01 (o fecha de inicio si es posterior) hasta hoy × 5/365
+  // Días leales: días_totales_trabajados × 5 / 360 (fórmula contable, igual que vacaciones)
   let ganadas_leal = 0;
   if (base.AplicaLeal && base.TipoContrato !== 'Contrato') {
-    const leal2025 = base.Leal2025 || 0;
-    const start2026 = new Date(Math.max(inicio.getTime(), new Date('2026-01-01').getTime()));
-    const dias2026 = Math.max(0, Math.floor((today - start2026) / 86400000));
-    const leal2026 = Math.round(dias2026 * 5 / 365 * 100) / 100;
-    ganadas_leal = Math.round((leal2025 + leal2026) * 100) / 100;
+    ganadas_leal = Math.round(dias * 5 / 360 * 100) / 100;
   }
   const ov = overrides[base.id] || {};
   // Vacaciones por año (base + override)
@@ -865,7 +918,7 @@ function calcEmployee(base) {
   let diasVigente = 0, ganadosVigente = 0, tomadosVigente = 0, netoVigente = 0;
   if(esContrato){
     diasVigente = Math.max(0, Math.floor((today - inicioVigente) / 86400000));
-    ganadosVigente = Math.round(diasVigente * 15 / 365 * 100) / 100;
+    ganadosVigente = Math.round(diasVigente * 15 / 360 * 100) / 100;
     // Solicitudes tomadas desde el inicio del período vigente
     const anivStr = inicioVigente.toISOString().slice(0,10);
     tomadosVigente = sols.filter(s => s.fi >= anivStr || s.anio >= inicioVigente.getFullYear())
@@ -935,7 +988,13 @@ function showModal(title,body,cb){
   document.getElementById('modal-overlay').classList.add('open');
   document.getElementById('modal-confirm-btn').onclick=()=>{closeModal();if(cb)cb();};
 }
-function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  // Restaurar botón confirmar por si fue ocultado por sincronizarPersonal
+  var cb = document.getElementById('modal-confirm-btn');
+  cb.style.display = '';
+  cb.textContent = 'Confirmar';
+}
 document.getElementById('modal-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // ══ TOPBAR ══
@@ -2348,6 +2407,151 @@ function importarEstado(event){
   reader.readAsText(file);
 }
 
+// ── SINCRONIZAR PERSONAL DESDE TABLERO PRESUPUESTAL ──────────────────────
+function sincronizarPersonal(event){
+  const file = event.target.files[0];
+  event.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    let data;
+    try { data = JSON.parse(e.target.result); }
+    catch(err){ showToast('JSON inválido: ' + err.message, 'error'); return; }
+
+    if(!data.empleados || !Array.isArray(data.empleados)){
+      showToast('El archivo no tiene el formato esperado (falta campo "empleados")', 'error');
+      return;
+    }
+
+    // Normalizar nombre para comparación
+    const norm = s => s ? s.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim() : '';
+
+    // Extraer palabras significativas (>=3 letras, sin abreviaturas como "M.")
+    const palabras = s => norm(s).split(/\s+/).filter(w => w.length >= 3 && !w.endsWith('.'));
+
+    // Buscar empleado por coincidencia de palabras clave (todas deben estar en el nombre completo)
+    const buscarEmp = nombre => {
+      const nNorm = norm(nombre);
+      // 1. Coincidencia exacta
+      const exacto = BASE_DATA.find(e => norm(e.Empleado) === nNorm);
+      if(exacto) return exacto;
+      // 2. Coincidencia por palabras: todas las palabras del nombre externo están en el nombre del dashboard
+      const pExt = palabras(nombre);
+      if(pExt.length < 2) return null;
+      const candidatos = BASE_DATA.filter(e => {
+        const pEmp = palabras(e.Empleado);
+        return pExt.every(p => pEmp.includes(p));
+      });
+      // Si hay un único candidato, es el match
+      return candidatos.length === 1 ? candidatos[0] : null;
+    };
+
+    const cambios = [];
+    const nuevos  = [];
+    const sinMatch = [];
+
+    data.empleados.forEach(ext => {
+      const emp = buscarEmp(ext.nombre);
+
+      if(!emp){
+        // No existe en el dashboard
+        if(ext.estado === 'activo') nuevos.push(ext);
+        else sinMatch.push(ext); // retirado que ya no está — ignorar
+        return;
+      }
+
+      const ovActual = overrides[emp.id] || {};
+      const estadoActual = ovActual.estado || 'activo';
+      const jefeActual = ovActual.JefeDirecto || emp.JefeDirecto;
+      const jefeNuevo  = ext.jefeDirecto || '';
+
+      const difs = [];
+      if(ext.estado && ext.estado !== estadoActual)
+        difs.push({ campo:'estado', antes: estadoActual, despues: ext.estado });
+      if(jefeNuevo && norm(jefeNuevo) !== norm(jefeActual))
+        difs.push({ campo:'jefeDirecto', antes: jefeActual, despues: jefeNuevo });
+
+      if(difs.length > 0) cambios.push({ emp, difs, ext });
+    });
+
+    // Construir HTML del reporte
+    let html = '<div style="font-family:var(--mono);font-size:11px;max-height:420px;overflow-y:auto;">';
+    html += '<div style="font-size:10px;color:var(--gy);margin-bottom:10px;">Archivo: <strong>' + file.name + '</strong> · ' + (data.fecha||'sin fecha') + '</div>';
+
+    if(cambios.length === 0 && nuevos.length === 0){
+      html += '<div style="color:#0F9D58;font-weight:700;padding:12px 0;">✅ Sin diferencias — el tablero ya está al día.</div>';
+    }
+
+    if(cambios.length > 0){
+      html += '<div style="font-weight:800;color:var(--dk);margin-bottom:6px;">🔄 Cambios detectados (' + cambios.length + ')</div>';
+      html += '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">';
+      html += '<tr style="font-size:9px;color:var(--gy);border-bottom:1px solid var(--bd);"><th style="text-align:left;padding:3px 6px;">Empleado</th><th style="text-align:left;padding:3px 6px;">Campo</th><th style="text-align:left;padding:3px 6px;">Actual</th><th style="text-align:left;padding:3px 6px;">Presupuestal</th></tr>';
+      cambios.forEach(c => {
+        c.difs.forEach((d,i) => {
+          html += '<tr style="border-bottom:1px solid var(--bd);">';
+          if(i===0) html += '<td style="padding:4px 6px;font-weight:700;color:var(--dk);" rowspan="' + c.difs.length + '">' + c.emp.Empleado + '</td>';
+          const color = d.campo==='estado' ? (d.despues==='retirado'?'var(--dr)':'#0F9D58') : 'var(--or)';
+          html += '<td style="padding:4px 6px;color:var(--gy);">' + d.campo + '</td>';
+          html += '<td style="padding:4px 6px;">' + d.antes + '</td>';
+          html += '<td style="padding:4px 6px;font-weight:700;color:' + color + ';">' + d.despues + '</td>';
+          html += '</tr>';
+        });
+      });
+      html += '</table>';
+    }
+
+    if(nuevos.length > 0){
+      html += '<div style="font-weight:800;color:var(--dk);margin-bottom:6px;">🆕 Personas nuevas sin registrar (' + nuevos.length + ')</div>';
+      html += '<ul style="margin:0 0 12px 0;padding-left:16px;">';
+      nuevos.forEach(n => { html += '<li style="padding:2px 0;"><strong>' + n.nombre + '</strong> — Jefe: ' + (n.jefeDirecto||'—') + '</li>'; });
+      html += '</ul>';
+    }
+
+    if(sinMatch.length > 0){
+      html += '<div style="font-size:9px;color:var(--gy);margin-top:4px;">ℹ️ ' + sinMatch.length + ' persona(s) retirada(s) en el presupuestal no encontrada(s) en este tablero (ya excluidas).</div>';
+    }
+
+    html += '</div>';
+
+    // Guardar cambios para aplicar si el usuario confirma
+    window._pendingSyncCambios = cambios;
+
+    // Mostrar modal con opciones
+    document.getElementById('modal-title').textContent = '🔁 Sincronización de personal';
+    document.getElementById('modal-body').innerHTML = html;
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    if(cambios.length > 0 || nuevos.length > 0){
+      confirmBtn.textContent = 'Aplicar cambios';
+      confirmBtn.onclick = function(){
+        aplicarSyncPersonal(cambios);
+        closeModal();
+      };
+      confirmBtn.style.display = '';
+    } else {
+      confirmBtn.style.display = 'none';
+    }
+    document.getElementById('modal-overlay').classList.add('open');
+  };
+  reader.readAsText(file);
+}
+
+function aplicarSyncPersonal(cambios){
+  let count = 0;
+  cambios.forEach(c => {
+    if(!overrides[c.emp.id]) overrides[c.emp.id] = {};
+    c.difs.forEach(d => {
+      if(d.campo === 'estado')       overrides[c.emp.id].estado = d.despues;
+      if(d.campo === 'jefeDirecto')  overrides[c.emp.id].JefeDirecto = d.despues;
+      count++;
+    });
+  });
+  guardarEnStorage();
+  marcarCambio();
+  renderModifiedList && renderModifiedList();
+  showToast('✅ ' + count + ' cambio(s) aplicado(s) correctamente', 'success');
+}
+// ── FIN SINCRONIZAR PERSONAL ──────────────────────────────────────────────
+
 function confirmarBorrarStorage(){
   showModal('¿Borrar todos los datos locales?',
     'Se eliminarán todos los cambios guardados en este navegador. Esta acción no se puede deshacer.',
@@ -2372,13 +2576,10 @@ function calcProyeccion(base) {
   const FIN_AÑO = new Date('2026-12-31');
   const inicio  = new Date(base.Inicio);
   const diasTotal = Math.max(0, Math.floor((FIN_AÑO - inicio) / 86400000));
-  const ganadas_ley_fin = Math.round(diasTotal * 15 / 365 * 100) / 100;
+  const ganadas_ley_fin = Math.round(diasTotal * 15 / 360 * 100) / 100;
 
-  // Leales 2025 (fijo) + Leales 2026 completos (todo el año desde inicio/01-ene)
-  const start2026 = new Date(Math.max(inicio.getTime(), new Date('2026-01-01').getTime()));
-  const dias2026fin = Math.max(0, Math.floor((FIN_AÑO - start2026) / 86400000));
-  const leal2026fin = Math.round(dias2026fin * 5 / 365 * 100) / 100;
-  const ganadas_leal_fin = Math.round(((base.Leal2025||0) + leal2026fin) * 100) / 100;
+  // Leales al 31-dic: días_totales_trabajados × 5 / 360
+  const ganadas_leal_fin = Math.round(diasTotal * 5 / 360 * 100) / 100;
 
   const ov = overrides[base.id] || {};
   const sols2 = (ov.solicitudes||[]).filter(s=>s.tipo==='ley');
@@ -3039,7 +3240,7 @@ function onConsEmpChange(){
   // Días de ley — usar campos reales de calcEmployee
   var ganadas=Math.round((d.DiasGanados1||0)*100)/100;
   var totalTomadas=Math.round((d.TotalTomadas||0)*100)/100;
-  var disponibles=Math.max(0,Math.round((d.NetoVac1||0)*100)/100);
+  var disponibles=Math.round((d.NetoVac1||0)*100)/100;
 
   // Desglose por año — ya incluyen solicitudes via vtAnio() en calcEmployee
   var vt22=d.VT22||0, vt23=d.VT23||0, vt24=d.VT24||0, vt25=d.VT25||0, vt26=d.VT26||0;
@@ -3052,7 +3253,7 @@ function onConsEmpChange(){
   if(esLeal){
     lealTotal=Math.round((d.DiasGanados2||0)*100)/100;
     lealTomados=Math.round((d.DiasTomados2Actual||0)*100)/100;
-    lealDisp=Math.max(0,Math.round((d.NetoDiasLeales||0)*100)/100);
+    lealDisp=Math.round((d.NetoDiasLeales||0)*100)/100;
   }
 
   // Indicador de color disponibles
@@ -3079,7 +3280,7 @@ function onConsEmpChange(){
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'+
       _consKpi('Ganadas', ganadas+'d', '#466491')+
       _consKpi('Tomadas', totalTomadas+'d', totalTomadas>0?'var(--or)':'var(--gy)')+
-      _consKpi('Disponibles', disponibles+'d', colorDias(disponibles,3,7))+
+      _consKpi(disponibles<0?'Anticipadas':'Disponibles', disponibles+'d', colorDias(disponibles,3,7))+
     '</div>'+
 
     '';
@@ -3309,31 +3510,132 @@ function _consKpi(label,val,color){
   '</div>';
 }
 
-// ══ INIT ══
-// ═══ VERSIÓN PÚBLICA — DATOS HORNEADOS 2026-08-20 ═══
-(function(){
-  var d=JSON.parse(decodeURIComponent(escape(atob('eyJvdmVycmlkZXMiOnsiMCI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoxLCJleHRyYVZhYzIiOjEsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6bnVsbCwiZmYiOm51bGwsImRpYXMiOjEsInRpcG8iOiJsZWFsIn0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDgtMTAiLCJmZiI6IjIwMjYtMDgtMTAiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dfSwiMSI6eyJfbW9kaWZpZWQiOnRydWUsInBhaXMiOiJQQU4ifSwiMiI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoxMywiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA3LTE3IiwiZmYiOiIyMDI2LTA4LTA3IiwiZGlhcyI6MTQsInRpcG8iOiJsZXkifV19LCIzIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjYsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNi0xNiIsImZmIjoiMjAyNi0wNi0xNiIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0xMSIsImZmIjoiMjAyNi0wOS0xNCIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0wNCIsImZmIjoiMjAyNi0wOS0wOCIsImRpYXMiOjMsInRpcG8iOiJsZXkifV19LCI1Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjE3LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMjEiLCJmZiI6IjIwMjYtMDYtMTYiLCJkaWFzIjoxNywidGlwbyI6ImxleSJ9XX0sIjYiOnsiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6IjIwMjYtMDYtMTYifSwiNyI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoxMSwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA1LTIyIiwiZmYiOiIyMDI2LTA1LTI1IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTIyIiwiZmYiOiIyMDI2LTA3LTA2IiwiZGlhcyI6OSwidGlwbyI6ImxleSJ9XX0sIjgiOnsic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMi0yNiIsImZmIjoiMjAyNi0wMy0wNiIsImRpYXMiOjcsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0xMCIsImZmIjoiMjAyNi0wNy0xMCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0xNCIsImZmIjoiMjAyNi0wNy0xNCIsImRpYXMiOjEsInRpcG8iOiJsZXkifV0sImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjB9LCI5Ijp7InNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDctMjMiLCJmZiI6IjIwMjUtMDctMjgiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTItMDUiLCJmZiI6IjIwMjUtMTItMDUiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDQtMDYiLCJmZiI6IjIwMjUtMDQtMjkiLCJkaWFzIjoxNSwidGlwbyI6ImxleSJ9XX0sIjEwIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMjUiLCJmZiI6IjIwMjYtMDUtMjUiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDEtMDUiLCJmZiI6IjIwMjYtMDEtMDciLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDMtMzAiLCJmZiI6IjIwMjYtMDQtMDEiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMjkiLCJmZiI6IjIwMjYtMTAtMDIiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTEtMDkiLCJmZiI6IjIwMjYtMTEtMTMiLCJkaWFzIjo1LCJ0aXBvIjoibGV5In1dLCJleHRyYVZhYzEiOjEwfSwiMTEiOnsic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMS0xNiIsImZmIjoiMjAyNi0wMS0yMSIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMy0wMiIsImZmIjoiMjAyNi0wMy0wNCIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMy0zMCIsImZmIjoiMjAyNi0wMy0zMCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNC0wMSIsImZmIjoiMjAyNi0wNC0wMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNS0wNCIsImZmIjoiMjAyNi0wNS0wNCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNS0wOCIsImZmIjoiMjAyNi0wNS0wOCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0wNS0zMCIsImZmIjoiMjAyNC0wNS0zMCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wMi0xNyIsImZmIjoiMjAyNS0wMi0xNyIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wMi0yNSIsImZmIjoiMjAyNS0wMi0yOCIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNy0yNSIsImZmIjoiMjAyNS0wNy0yOSIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wOC0xNSIsImZmIjoiMjAyNS0wOC0xNSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wOS0xNyIsImZmIjoiMjAyNS0wOS0xNyIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0xMS0wNCIsImZmIjoiMjAyNS0xMS0wNCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0xMi0xOCIsImZmIjoiMjAyNS0xMi0xOSIsImRpYXMiOjIsInRpcG8iOiJsZXkifV0sImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjB9LCIxMiI6eyJfbW9kaWZpZWQiOnRydWV9LCIxMyI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoxLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMDEiLCJmZiI6IjIwMjYtMDYtMDEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dfSwiMTQiOnsiZXh0cmFWYWMxIjo1LCJfbW9kaWZpZWQiOnRydWV9LCIxNiI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo5LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMTYiLCJmZiI6IjIwMjYtMDYtMTkiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDgtMjQiLCJmZiI6IjIwMjYtMDgtMjgiLCJkaWFzIjo1LCJ0aXBvIjoibGV5In1dfSwiMTciOnsiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6IjIwMjYtMDgtMTAiLCJleHRyYVZhYzEiOjEwLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMDkiLCJmZiI6IjIwMjYtMDYtMjMiLCJkaWFzIjoxMCwidGlwbyI6ImxleSJ9XX0sIjE4Ijp7InNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDMtMTMiLCJmZiI6IjIwMjYtMDMtMTMiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMDEiLCJmZiI6IjIwMjYtMDQtMDEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDQtMTQiLCJmZiI6IjIwMjUtMDQtMTYiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDgtMDQiLCJmZiI6IjIwMjUtMDgtMDYiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDgtMDgiLCJmZiI6IjIwMjUtMDgtMDgiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTEtMTQiLCJmZiI6IjIwMjUtMTEtMTQiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTItMjIiLCJmZiI6IjIwMjUtMTItMjQiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTItMTgiLCJmZiI6IjIwMjUtMTItMTkiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In1dLCJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMyIjowfSwiMTkiOnsiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6IjIwMjYtMDUtMzEifSwiMjAiOnsiX21vZGlmaWVkIjp0cnVlLCJwYWlzIjoiUEFOIiwiZXh0cmFWYWMxIjozfSwiMjMiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MjcsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOC0zMSIsImZmIjoiMjAyNi0wOS0yNSIsImRpYXMiOjIwLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDctMDMiLCJmZiI6IjIwMjYtMDctMTMiLCJkaWFzIjo3LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMTItMzEiLCJmZiI6IjIwMjQtMTItMzEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTItMTUiLCJmZiI6IjIwMjUtMTItMTkiLCJkaWFzIjo1LCJ0aXBvIjoibGV5In1dLCJhZGRWVDI0IjotNH0sIjI0Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjUsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6bnVsbCwiZmYiOm51bGwsImRpYXMiOjUsInRpcG8iOiJsZWFsIn0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDMtMzAiLCJmZiI6IjIwMjYtMDMtMzEiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMDEiLCJmZiI6IjIwMjYtMDQtMDEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMjIiLCJmZiI6IjIwMjYtMDYtMjUiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDEtMDUiLCJmZiI6IjIwMjYtMDEtMDYiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In1dLCJleHRyYVZhYzEiOjd9LCIyNSI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoxLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMjIiLCJmZiI6IjIwMjI2LTA0LTIyIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9XX0sIjI2Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjQsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNi0wOSIsImZmIjoiMjAwNi0wNi0xMiIsImRpYXMiOjQsInRpcG8iOiJsZXkifV19LCIyNyI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjozLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMDYiLCJmZiI6IjIwMjYtMDQtMDgiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDUtMTMiLCJmZiI6IjIwMjUtMDUtMjEiLCJkaWFzIjo3LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTItMjIiLCJmZiI6IjIwMjUtMTItMzEiLCJkaWFzIjo3LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMTEtMDgiLCJmZiI6IjIwMjQtMTEtMDgiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMTEtMjciLCJmZiI6IjIwMjQtMTEtMjgiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMTItMTAiLCJmZiI6IjIwMjQtMTItMTMiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMTItMTYiLCJmZiI6IjIwMjQtMTItMTkiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In1dfSwiMjgiOnsiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6IjIwMjYtMDQtMzAifSwiMjkiOnsiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6IjIwMjYtMDctMTcifSwiMzAiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMy0yNCIsImZmIjoiMjAyNi0wNC0wOCIsImRpYXMiOjEwLCJ0aXBvIjoibGV5In1dfSwiMzEiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMi0wNSIsImZmIjoiMjAyNi0wMi0wNiIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMi0yNiIsImZmIjoiMjAyNi0wMi0yNyIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNC0wOSIsImZmIjoiMjAyNi0wNC0xMCIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNi0wMyIsImZmIjoiMjAyNi0wNi0wNSIsImRpYXMiOjMsInRpcG8iOiJsZXkifV19LCIzMiI6eyJleHRyYVZhYzEiOjUsIl9tb2RpZmllZCI6dHJ1ZX0sIjMzIjp7Il9tb2RpZmllZCI6dHJ1ZSwiZXh0cmFWYWMyIjowLCJhZGRMZWFsIjowLCJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0yNyIsImZmIjoiMjAyNi0wNy0zMSIsImRpYXMiOjUsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMS0xMiIsImZmIjoiMjAyNi0wMS0xNiIsImRpYXMiOjUsInRpcG8iOiJsZXkifV19LCIzNSI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo0LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDgtMDMiLCJmZiI6IjIwMjYtMDgtMDYiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDctMDkiLCJmZiI6IjIwMjUtMDctMTEiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDgtMjUiLCJmZiI6IjIwMjUtMDgtMjYiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDgtMjgiLCJmZiI6IjIwMjUtMDgtMjgiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMDktMDkiLCJmZiI6IjIwMjQtMDktMTIiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMDgtMjgiLCJmZiI6IjIwMjQtMDgtMzAiLCJkaWFzIjozLCJ0aXBvIjoibGV5In1dLCJhZGRMZWFsIjoxMX0sIjM2Ijp7InNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDItMjciLCJmZiI6IjIwMjYtMDMtMDIiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDgtMDUiLCJmZiI6IjIwMjUtMDgtMjUiLCJkaWFzIjoxMywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAxLTAyIiwiZmYiOiIyMDI2LTAxLTEwIiwiZGlhcyI6NiwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwiZXh0cmFWYWMxIjo2fSwiMzciOnsiX21vZGlmaWVkIjp0cnVlLCJwYWlzIjoiUEFOIn0sIjM4Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjM5Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQwIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQxIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQyIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQzIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ0Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ1Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ2Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ3Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ4Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ5Ijp7ImV4dHJhVmFjMiI6MCwiYWRkTGVhbCI6MCwiX21vZGlmaWVkIjp0cnVlfSwiNTAiOnsiZXh0cmFWYWMyIjowLCJhZGRMZWFsIjowLCJfbW9kaWZpZWQiOnRydWV9LCI1MSI6eyJfbW9kaWZpZWQiOnRydWV9fSwibXV0YXRpb25zIjpbeyJpZCI6MCwiQ2FyZ28iOiJBU1NPQ0lBVEUgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBSIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wNy0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjUsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6My41NiwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjEsIkNhcmdvIjoiQUkgVEVDSCBTUEVDSUFMSVNUIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTEyLTE2IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MC4yMn0seyJpZCI6MiwiQ2FyZ28iOiJTUiBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJKdWFuIFIiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTA2LTAzIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjo0LjE4LCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MywiQ2FyZ28iOiJBSSBERUxJVkVSWSBTUi4gQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFIiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjUtMTEtMjYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NCwiQ2FyZ28iOiJTRU5JT1IgQU5BTFlTVCwgQlVTSU5FU1MgQU5BTFlUSUNTIiwiSmVmZURpcmVjdG8iOiJKdWFuIFIiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDIzLTA1LTE1IiwiVlQyMiI6MCwiVlQyMyI6MiwiVlQyNCI6MTUsIlZUMjUiOjksIlZUMjYiOjIwLCJEaWFzVG9tYWRvczIiOjIuOSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjUsIkNhcmdvIjoiREFUQSBTQ0lFTlRJU1QiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjQtMTEtMjYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxNCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6NiwiQ2FyZ28iOiJEQVRBIFFVQUxJVFkgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFIiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAyLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NCwiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjowLjUxLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6NywiQ2FyZ28iOiJTUiBBTkFMWVNUIEJVU0lORVNTIEFOQUxZVElDUyIsIkplZmVEaXJlY3RvIjoiSnVhbiBSIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNC0wNy0xNSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6NC43NSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjgsIkNhcmdvIjoiTkVUV09SSyBBTkQgUFJPRFVDVCBTRU5JT1IgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBSIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0xNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjgsIkRpYXNUb21hZG9zMiI6MS4xMSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjksIkNhcmdvIjoiREFUQSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXZhbiBHIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA0LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NSwiVlQyNiI6MTUsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxMCwiQ2FyZ28iOiJTRU5JT1IgQlVTSU5FU1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMDMtMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxMCwiVlQyNiI6NiwiRGlhc1RvbWFkb3MyIjowLjg5LCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MTEsIkNhcmdvIjoiU1IgTUFOQUdFUiBEQVRBIFNDSUVOQ0UiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNC0wNC0wOCIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjExLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6MTIsIkNhcmdvIjoiSUEgU1BFQ0lBTElTVCAoTElCRVJUWSkiLCJKZWZlRGlyZWN0byI6Ikp1YW4gUiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMTAtMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjMuODIsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoxMywiQ2FyZ28iOiJNQU5BR0VSIiwiSmVmZURpcmVjdG8iOiJKZWFuZXR0ZSBHIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA1LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MTgsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxNCwiQ2FyZ28iOiJEQVRBIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAzLTE3IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NiwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjoyLjExLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MTUsIkNhcmdvIjoiQ1VTVE9NRVIgREFUQSBERU1BTkQgT1BTIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUiIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNS0wMS0xNSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjIsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxNiwiQ2FyZ28iOiJQTU8iLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEciLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDEtMTUiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6MTcsIkNhcmdvIjoiREFUQSBTQ0lFTlRJU1QiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjQtMDctMDgiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxNCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MTgsIkNhcmdvIjoiREFUQSBERUxJVkVSWSAmIFFVQUxJVFkgU1IgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFIiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTA1LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NywiVlQyNiI6MiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MTksIkNhcmdvIjoiU1IgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiTWF1cmljaW8iLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTEyLTAyIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NywiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjAsIkNhcmdvIjoiREVWT1BTIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTExLTE3IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MC42Mn0seyJpZCI6MjEsIkNhcmdvIjoiTkVUV09SSyBBTkQgUFJPRFVDVCBBTkFMWVRJQ1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSnVhbiBSIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wMy0yNCIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjIyLCJDYXJnbyI6IlNSIEJVU0lORVNTIElOVEVMTElHRU5DRSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjQtMDItMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjozLCJWVDI2IjoxLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoyMywiQ2FyZ28iOiJCVVNJTkVTUyBBTkFMWVRJQ1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSnVhbiBSIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyMy0wMi0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjUsIlZUMjUiOjUsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjI0LCJDYXJnbyI6IlNSIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6Ikp1YW4gUiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjQtMTEtMDQiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxMCwiVlQyNiI6MiwiRGlhc1RvbWFkb3MyIjoxLjI5LCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjUsIkNhcmdvIjoiQUkgREVMSVZFUlkgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFIiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTAyLTE2IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6MjYsIkNhcmdvIjoiREFUQSBTQ0lFTlRJU1QiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMTItMDkiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjQuNzcsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoyNywiQ2FyZ28iOiJCVVNJTkVTUyBBTkFMWVRJQ1MgQVNTT0NJQVRFIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6Ikp1YW4gUiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjMtMDEtMjMiLCJWVDIyIjowLCJWVDIzIjo2LCJWVDI0IjoxMSwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjgsIkNhcmdvIjoiREFUQSBTQ0lFTlRJU1QgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFIiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDIyLTAyLTIxIiwiVlQyMiI6MCwiVlQyMyI6MTYsIlZUMjQiOjEwLCJWVDI1IjoxMCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6MjksIkNhcmdvIjoiQUkgU1RSQVRFR1kgJiBERUxJVkVSWSBMRUFEIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUiIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNi0wMi0xNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjozMCwiQ2FyZ28iOiJDQk0gQlVTSU5FU1MgQU5BTFlTVCBPUFMiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEciLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjQtMDEtMTAiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0Ijo2LCJWVDI1IjowLCJWVDI2IjoxMCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjMxLCJDYXJnbyI6IlBSRVNUQUNJw5NOIFNFUlZJQ0lPUyAoTElCRVJUWSkiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEciLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjQtMTItMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxMiwiVlQyNiI6NiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjMyLCJDYXJnbyI6IlNJVEUgUkVMSUFCSUxJVFkgRU5HSU5FRVIiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMDUtMjYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1Ijo1LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjIuMDcsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjozMywiQ2FyZ28iOiJKUiBEQVRBIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAzLTI0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MSwiVlQyNiI6NSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6My44OH0seyJpZCI6MzQsIkNhcmdvIjoiSUEgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSXZhbiBHIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI1LTAxLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6NSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM1LCJDYXJnbyI6IkJVU0lORVNTIFNQRUNJQUxJU1QiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDIzLTAzLTAxIiwiVlQyMiI6MCwiVlQyMyI6OCwiVlQyNCI6MCwiVlQyNSI6NiwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MzYsIkNhcmdvIjoiREFUQSBFTkdJTkVFUiBPUFMiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNC0wNy0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjIsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjozNywiQ2FyZ28iOiJJTkdFTklFUk8gREUgREFUT1MgSlVOSU9SIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA0LTEzIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6MzgsIkNhcmdvIjoiQUkgREVNQU5EIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDYtMDUiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjozOSwiQ2FyZ28iOiJDQk0gU0VOSU9SIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA2LTE2IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDAsIkNhcmdvIjoiREFUQSBRVUFMSVRZIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNi0zMCIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQxLCJDYXJnbyI6IkRBVEEgU0NJRU5USVNUIiwiSmVmZURpcmVjdG8iOiJKZWFuZXR0ZSBHIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNi0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQyLCJDYXJnbyI6IlNSIFBMQVRGT1JNIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDYtMTAiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDMsIkNhcmdvIjoiU0VOSU9SIEFOQUxZU1QgQkEiLCJKZWZlRGlyZWN0byI6Ikp1YW4gUiIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNi0wNy0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjo0NCwiQ2FyZ28iOiJBSSBERVZFTE9QRVIiLCJKZWZlRGlyZWN0byI6Ikl2YW4gRyIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDctMTQiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjo0NSwiQ2FyZ28iOiJBSSBTUEVDSUFMSVNUIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA3LTIxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDYsIkNhcmdvIjoiQUkgREVWRUxPUEVSIiwiSmVmZURpcmVjdG8iOiJJdmFuIEciLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA3LTI3IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDcsIkNhcmdvIjoiTUFOQUdFUsKgIEJBIiwiSmVmZURpcmVjdG8iOiJKdWFuIFIiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDctMjEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDgsIkNhcmdvIjoiRFMgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSXZhbiBHIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTA3LTIxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9XSwibmV3RW1wbG95ZWVzIjpbeyJpZCI6NDksIlBhaXMiOiJDT0wiLCJFbXBsZWFkbyI6IkpBSU1FIFRPTEUgQ0xBVklKTyIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSmVmZURpcmVjdG8iOiJNYXVyaWNpbyIsIkNhcmdvIjoiQUkgVFJBTlNGT1JNQVRJT04gQ09OU1VMVEFOVCIsIkluaWNpbyI6IjIwMjYtMDctMjciLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NTAsIlBhaXMiOiJDT0wiLCJFbXBsZWFkbyI6IkxBVVJBIFJPTUVSTyIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSmVmZURpcmVjdG8iOiJKdWFuIFIiLCJDYXJnbyI6IlNFTklPUiBNQU5BR0VSIEFJIEFORCBDQVJFIEFVVE9NQVRJT04iLCJJbmljaW8iOiIyMDI2LTA4LTAzIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjUxLCJQYWlzIjoiQ09MIiwiRW1wbGVhZG8iOiJKVUFOIFNFQkFTVElBTiBWQUxFTkNJQSIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkplZmVEaXJlY3RvIjoiSXZhbiBHIiwiQ2FyZ28iOiJTRU1JIFNSIERBVEEgU0NJRU5USVNUIiwiSW5pY2lvIjoiMjAyNi0wOC0wMyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ5LCJQYWlzIjoiQ09MIiwiRW1wbGVhZG8iOiJBTEVKQU5EUk8gw4FOR0VMIERVUVVFIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUiIsIkNhcmdvIjoiQUkgUHJvZHVjdGl2aXR5IE1hbmFnZXIiLCJJbmljaW8iOiIyMDI2LTA4LTA1IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlfV0sIm5leHRJZCI6NTB9'))));
-  var ov=d.overrides; for(var k in ov){overrides[k]=ov[k];}
-  d.mutations.forEach(function(m){
-    if(BASE_DATA[m.id]){var _m=BASE_DATA[m.id];
-      _m.Cargo=m.Cargo;_m.JefeDirecto=m.JefeDirecto;_m.TipoContrato=m.TipoContrato;
-      _m.Inicio=m.Inicio;_m.VT22=m.VT22||0;_m.VT23=m.VT23||0;_m.VT24=m.VT24||0;
-      _m.VT25=m.VT25||0;_m.VT26=m.VT26||0;_m.DiasTomados2=m.DiasTomados2||0;
-      _m.AplicaLeal=!!m.AplicaLeal;_m.Leal2025=m.Leal2025||0;}
+// ══ SALARIOS ══
+let _salariosCargados = false;
+
+function renderSalarios(){
+  if(_salariosCargados) return;
+  _salariosCargados = true;
+
+  const jefeSel = document.getElementById('fSalJefe');
+  // Limpiar opciones anteriores salvo "Todos"
+  while(jefeSel.options.length > 1) jefeSel.remove(1);
+  // Usar solo BASE_DATA como fuente (ya normalizada)
+  const jefes = [...new Set(BASE_DATA
+    .filter(e=>(overrides[e.id]||{}).estado!=='retirado')
+    .map(e=>e.JefeDirecto)
+  )].sort();
+  jefes.forEach(j=>{const o=document.createElement('option');o.value=o.textContent=j;jefeSel.appendChild(o);});
+  filterSalarios();
+}
+
+function filterSalarios(){
+  const fMoneda   = document.getElementById('fSalMoneda').value;
+  const fContrato = document.getElementById('fSalContrato').value;
+  const fJefe     = document.getElementById('fSalJefe').value;
+
+  const fmt = (n, mon) => {
+    if(n==null||n===0&&mon==='—') return '—';
+    if(n===0) return mon==='COP' ? '$ 0' : 'US$ 0';
+    return mon==='COP'
+      ? '$ '+n.toLocaleString('es-CO')
+      : 'US$ '+n.toLocaleString('en-US');
+  };
+
+  const filas = BASE_DATA.filter(e=>{
+    const ov=overrides[e.id]||{};
+    if((ov.estado||'activo')==='retirado') return false;
+    const s=SALARY_DATA[e.id];
+    if(fMoneda && (!s||s.moneda!==fMoneda)) return false;
+    if(fContrato && e.TipoContrato!==fContrato) return false;
+    if(fJefe && (ov.JefeDirecto||e.JefeDirecto)!==fJefe) return false;
+    return true;
+  }).sort((a,b)=>a.Empleado.localeCompare(b.Empleado));
+
+  const tbody = document.getElementById('tbl-salarios');
+  tbody.innerHTML = filas.map(e=>{
+    const ov  = overrides[e.id]||{};
+    const s   = SALARY_DATA[e.id];
+    const mon = s ? s.moneda : '—';
+    const bas = s ? s.basico : null;
+    const ext = s ? s.extralegal : null;
+    const tot = (bas!=null && ext!=null) ? bas+ext : bas;
+    const jefe  = ov.JefeDirecto||e.JefeDirecto;
+    const cargo = ov.Cargo||e.Cargo;
+    const badgeMon = mon==='COP'
+      ? '<span style="background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700;">COP</span>'
+      : mon==='USD'
+      ? '<span style="background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700;">USD</span>'
+      : '<span style="color:var(--gy);font-size:9px;">—</span>';
+    return '<tr>'+
+      '<td style="font-weight:600;">'+e.Empleado+'</td>'+
+      '<td style="font-size:10px;color:var(--gy);">'+cargo+'</td>'+
+      '<td><span style="background:var(--bl);color:#fff;border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;">'+jefe+'</span></td>'+
+      '<td style="font-size:10px;">'+e.TipoContrato+'</td>'+
+      '<td class="tc">'+badgeMon+'</td>'+
+      '<td class="tr" style="font-variant-numeric:tabular-nums;">'+fmt(bas,mon)+'</td>'+
+      '<td class="tr" style="font-variant-numeric:tabular-nums;color:'+(ext?'var(--or)':'var(--gy)')+';">'+fmt(ext,mon)+'</td>'+
+      '<td class="tr" style="font-weight:700;color:var(--bl);font-variant-numeric:tabular-nums;">'+fmt(tot,mon)+'</td>'+
+    '</tr>';
+  }).join('');
+
+  document.getElementById('sal-count').textContent=filas.length+' empleados';
+}
+
+function exportSalariosXLSX(){
+  const fMoneda   = document.getElementById('fSalMoneda').value;
+  const fContrato = document.getElementById('fSalContrato').value;
+  const fJefe     = document.getElementById('fSalJefe').value;
+
+  const filas = BASE_DATA.filter(e=>{
+    const ov=overrides[e.id]||{};
+    if((ov.estado||'activo')==='retirado') return false;
+    const s=SALARY_DATA[e.id];
+    if(fMoneda && (!s||s.moneda!==fMoneda)) return false;
+    if(fContrato && e.TipoContrato!==fContrato) return false;
+    if(fJefe && e.JefeDirecto!==fJefe) return false;
+    return true;
+  }).sort((a,b)=>a.Empleado.localeCompare(b.Empleado));
+
+  const rows = filas.map(e=>{
+    const ov  = overrides[e.id]||{};
+    const s   = SALARY_DATA[e.id];
+    const bas = s ? s.basico : null;
+    const ext = s ? s.extralegal : null;
+    const tot = (bas!=null && ext!=null) ? bas+ext : bas;
+    return {
+      'Empleado':             e.Empleado,
+      'Cargo':                ov.Cargo||e.Cargo,
+      'Jefe Directo':         e.JefeDirecto,
+      'Tipo Contrato':        e.TipoContrato,
+      'Moneda':               s ? s.moneda : '—',
+      'Salario Básico':       bas,
+      'Beneficio Extralegal': ext||0,
+      'Salario Total':        tot
+    };
   });
-  BASE_DATA.splice(49);
-  d.newEmployees.forEach(function(e){BASE_DATA.push(e);});
-  nextId=d.nextId;
-  guardarEnStorage=function(){return true;};
-  cargarDesdeStorage=function(){return false;};
-  marcarCambio=function(){};
-})();
-// ═══ FIN DATOS HORNEADOS ═══
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:35},{wch:32},{wch:22},{wch:14},{wch:8},{wch:18},{wch:22},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Salarios');
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Salarios_Liberty_${dateStr}.xlsx`);
+}
+
+function resetSalarios(){
+  document.getElementById('fSalMoneda').value='';
+  document.getElementById('fSalContrato').value='';
+  document.getElementById('fSalJefe').value='';
+  filterSalarios();
+}
+
+// ══ INIT ══
 (function init(){
   ['panel-vac','panel-nuevo','panel-mod','panel-hist','panel-cons'].forEach(id=>{
     const el=document.getElementById(id);if(el) el.style.display='none';
   });
-  document.getElementById('panel-cons').style.display='block';
+  document.getElementById('panel-vac').style.display='block';
   const loaded=cargarDesdeStorage();
   // Migración: corregir año de solicitudes y ajustar extraVac1
   let migraciones=0;
@@ -3389,12 +3691,12 @@ function _consKpi(label,val,color){
     const base=BASE_DATA[parseInt(k)]; if(base) base.Pais=ov.pais;
   });
   recalcularTodo();
+  // Parche: eliminar JefeDirecto de overrides — BASE_DATA es la fuente canónica
+  Object.keys(overrides).forEach(function(k){
+    if(overrides[k] && overrides[k].JefeDirecto) delete overrides[k].JefeDirecto;
+  });
   populateJefeFilters();
-  /* public */
-  ['panel-vac','panel-nuevo','panel-mod','panel-hist'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
-  setMode=function(m){['panel-vac','panel-nuevo','panel-mod','panel-hist','panel-cons'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});if(m==='cons'){var c=document.getElementById('panel-cons');if(c)c.style.display='block';}};
-  initConsEmpSelect();
-  renderAlertas();
+  if(loaded){renderLog();renderModifiedList();showToast('💾 Estado anterior restaurado automáticamente','success');}
   setInterval(()=>{updateTopbar();updateTicker();},60000);
   setInterval(()=>{
     const now=new Date();
@@ -3598,6 +3900,34 @@ function _consKpi(label,val,color){
 
 
 <!-- ═══════════ TAB: SYNC NÓMINA ═══════════ -->
+<!-- ═══════════ TAB: SALARIOS ═══════════ -->
+<div id="tab-salarios" class="tp"><div class="cnt">
+  <div class="sl">💰 SALARIOS DEL EQUIPO — AGOSTO 2026</div>
+  <div class="filter-row">
+    <label>Moneda:</label>
+    <select id="fSalMoneda" onchange="filterSalarios()"><option value="">Todas</option><option>COP</option><option>USD</option></select>
+    <label>Contrato:</label>
+    <select id="fSalContrato" onchange="filterSalarios()"><option value="">Todos</option><option>Nómina Leal</option><option>Contrato</option></select>
+    <label>Jefe:</label>
+    <select id="fSalJefe" onchange="filterSalarios()"><option value="">Todos</option></select>
+    <span class="filter-reset" onclick="resetSalarios()">✕ Limpiar</span>
+    <button onclick="exportSalariosXLSX()" style="margin-left:10px;font-size:10px;padding:4px 10px;border:1px solid #1A3A5C;border-radius:5px;background:#1A3A5C;color:#fff;cursor:pointer;font-family:var(--mono);font-weight:700;">⬇ Excel</button>
+    <span class="filter-count" id="sal-count">— empleados</span>
+  </div>
+  <div class="tw">
+    <table id="sal-table"><thead><tr>
+      <th>Empleado</th>
+      <th>Cargo</th>
+      <th>Jefe Directo</th>
+      <th>Contrato</th>
+      <th class="tc">Moneda</th>
+      <th class="tr">Salario Básico</th>
+      <th class="tr">Beneficio Extralegal</th>
+      <th class="tr">Salario Total</th>
+    </tr></thead><tbody id="tbl-salarios"></tbody></table>
+  </div>
+</div></div>
+
 <div id="tab-sync" class="tp"><div class="cnt">
   <div class="sl">🔄 SINCRONIZACIÓN — CONTROL LEAL (SHEETS)</div>
 
