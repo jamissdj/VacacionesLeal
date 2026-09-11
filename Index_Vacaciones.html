@@ -267,7 +267,7 @@ tbody td{padding:11px 14px;color:#2D3350;}
   <div class="tab" onclick="ST('proyeccion',this);renderProyeccion()" style="display:none">📈 Proyección Dic-2026</div>
   <div class="tab" onclick="ST('simulador',this);initSimulador()" style="display:none">🎯 Simulador</div>
   <div class="tab" onclick="ST('sync',this);initSync()" style="display:none">🔄 Sync Nómina</div>
-  <div class="tab" onclick="ST('salarios',this);renderSalarios()">💰 Salarios</div>
+  <div class="tab" onclick="ST('salarios',this);renderSalarios()" style="display:none">💰 Salarios</div>
 </div>
 
 <!-- ═══════════ TAB 1: CUADRO DE MANDO ═══════════ -->
@@ -1628,7 +1628,7 @@ const PAIS_NOMBRE = {COL:'colombiano(s)',MEX:'mexicano(s)',PAN:'panameño(s)'};
 function getPaisEmpleado(){
   const id=parseInt(document.getElementById('mando-emp').value);
   if(isNaN(id)) return 'COL';
-  return BASE_DATA[id]?.Pais || 'COL';
+  return empById(id)?.Pais || 'COL';
 }
 
 function esFestivo(fecha, pais){
@@ -1697,7 +1697,7 @@ function aplicarAjusteManual(){
 function checkLealWarning(){
   const id=parseInt(document.getElementById('mando-emp').value);
   if(isNaN(id)) return;
-  const d=calcEmployee(BASE_DATA[id]);
+  const d=calcEmployee(empById(id));
   const esContrato=d.TipoContrato==='Contrato';
   const lealWrap=document.getElementById('leal-input-wrap');
   const lealWarn=document.getElementById('leal-warning');
@@ -1721,7 +1721,7 @@ function checkLealWarning(){
 function onEmpChange(){
   const id=parseInt(document.getElementById('mando-emp').value);
   if(isNaN(id)){document.getElementById('mando-info-box').style.display='none';return;}
-  const d=calcEmployee(BASE_DATA[id]);
+  const d=calcEmployee(empById(id));
   document.getElementById('mando-info-box').style.display='block';
   document.getElementById('mi-name').textContent=d.Empleado;
   document.getElementById('mi-cargo').textContent=d.Cargo+' · '+d.TipoContrato+' · '+d.Pais;
@@ -1766,7 +1766,7 @@ function setEstado(est,silent=false){
 function applyChanges(){
   const id=parseInt(document.getElementById('mando-emp').value);
   if(isNaN(id)){showToast('⚠️ Selecciona un empleado primero','warning');return;}
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   const ov=overrides[id]||{};
   const nuevoEstado=mandoEstado;
   const vacLey=parseInt(document.getElementById('input-vac-ley').value)||0;
@@ -1809,13 +1809,13 @@ function applyChanges(){
 function resetEmployee(){
   const id=parseInt(document.getElementById('mando-emp').value);
   if(isNaN(id)){showToast('⚠️ Selecciona un empleado','warning');return;}
-  showModal('¿Reiniciar?',`Se restauran los valores base de ${BASE_DATA[id].Empleado}.`,()=>{
+  showModal('¿Reiniciar?',`Se restauran los valores base de ${empById(id).Empleado}.`,()=>{
     delete overrides[id];
     const now=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-    addLog('reingreso',now,`${BASE_DATA[id].Empleado}: reiniciado a valores base`);
+    addLog('reingreso',now,`${empById(id).Empleado}: reiniciado a valores base`);
     updateTopbar();updateTicker();onEmpChange();renderRetirados();renderModifiedList();
     marcarCambio();
-    showToast(`✓ ${BASE_DATA[id].Empleado.split(' ')[0]} reiniciado`,'success');
+    showToast(`✓ ${empById(id).Empleado.split(' ')[0]} reiniciado`,'success');
   });
 }
 
@@ -1824,7 +1824,7 @@ function onHistEmpChange(){
   const id=parseInt(document.getElementById('hist-emp').value);
   const info=document.getElementById('hist-info');
   if(isNaN(id)){info.style.display='none';return;}
-  const d=calcEmployee(BASE_DATA[id]);
+  const d=calcEmployee(empById(id));
   info.style.display='block';
   document.getElementById('hist-current').textContent=`2022:${d.VT22} 2023:${d.VT23} 2024:${d.VT24} 2025:${d.VT25} 2026:${d.VT26}`;
 }
@@ -1837,7 +1837,7 @@ function applyHistorico(){
   const dias=parseInt(document.getElementById('hist-dias').value)||0;
   const diasLeal=parseInt(document.getElementById('hist-dias-leal').value)||0;
   if(dias<=0&&diasLeal<=0){showToast('⚠️ Ingresa al menos 1 día','warning');return;}
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   showModal(`Actualizar histórico: ${emp.Empleado}`,
     `Año ${year}: +${dias}d vacaciones ley${diasLeal>0?' + '+diasLeal+'d leales':''}`,
     ()=>{
@@ -1884,11 +1884,11 @@ function renderRetirados(){
 }
 
 function reactivar(id){
-  showModal(`¿Reactivar ${BASE_DATA[id].Empleado}?`,'Volverá a incluirse en el análisis de pasivo.',()=>{
+  showModal(`¿Reactivar ${empById(id).Empleado}?`,'Volverá a incluirse en el análisis de pasivo.',()=>{
     overrides[id]={...(overrides[id]||{}),estado:'activo'};
-    addLog('reingreso',new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),`${BASE_DATA[id].Empleado} reactivado`);
+    addLog('reingreso',new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),`${empById(id).Empleado} reactivado`);
     updateTopbar();updateTicker();renderMando();marcarCambio();
-    showToast(`✓ ${BASE_DATA[id].Empleado.split(' ')[0]} reactivado`,'success');
+    showToast(`✓ ${empById(id).Empleado.split(' ')[0]} reactivado`,'success');
   });
 }
 
@@ -1900,7 +1900,7 @@ function renderModifiedList(){
   if(!modIds.length&&!newEmps.length){el.innerHTML='<div style="font-size:9px;color:var(--gy);padding:6px 0;text-align:center;">Sin cambios aún.</div>';return;}
   let rows='';
   modIds.forEach(id=>{
-    const ov=overrides[id];const b=BASE_DATA[id];
+    const ov=overrides[id];const b=empById(id);
     const tags=[];
     if(ov.estado==='retirado') tags.push('<span class="badge bdr">👋 Retirado</span>');
     if(ov._modified) tags.push('<span class="badge bbl">✏️ Modificado</span>');
@@ -1961,6 +1961,14 @@ function setNuevoLeal(val){
   document.getElementById('btn-leal-no').className='toggle-btn'+(!val?' active-retiro':'');
 }
 
+// ── LOOKUP HELPER (evita colisiones de id cuando hay empleados nuevos) ──
+// Busca desde el final para que empleados agregados via UI tengan prioridad sobre
+// entradas hardcodeadas con el mismo id (ej: Alejandro Duque id=49 vs Jaime Tole id=49)
+function empById(id){
+  for(var _i=BASE_DATA.length-1;_i>=0;_i--){if(BASE_DATA[_i].id===id)return BASE_DATA[_i];}
+  return undefined;
+}
+
 // ── ADD NEW EMPLOYEE ──
 let nextId=BASE_DATA.length;
 function addNewEmployee(){
@@ -2008,7 +2016,7 @@ function onModContratoChange(){
   const id=parseInt(document.getElementById('mod-emp').value);
   const block=document.getElementById('mod-leal-block');
   if(isNaN(id)||!newContrato){block.style.display='none';return;}
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   const currentEsLeal=emp.TipoContrato==='Nómina Leal';
   const newEsLeal=newContrato==='Nómina Leal';
   if(newEsLeal&&!currentEsLeal){
@@ -2040,7 +2048,7 @@ function onLealFechaOpt(val){
 function actualizarPreviewLeal(){
   const id=parseInt(document.getElementById('mod-emp').value);
   if(isNaN(id))return;
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   const opt=document.querySelector('input[name="leal-fecha-opt"]:checked');
   if(!opt)return;
   let fechaBase;
@@ -2068,7 +2076,7 @@ function onModEmpChange(){
   const id=parseInt(document.getElementById('mod-emp').value);
   const preview=document.getElementById('mod-info-preview');
   if(isNaN(id)){preview.style.display='none';return;}
-  const d=calcEmployee(BASE_DATA[id]);
+  const d=calcEmployee(empById(id));
   preview.style.display='block';
   document.getElementById('mod-preview-cargo').textContent=d.Cargo;
   document.getElementById('mod-preview-jefe').textContent=d.JefeDirecto;
@@ -2092,7 +2100,7 @@ function applyModification(){
   const newFecha=document.getElementById('mod-fecha').value;
   const newPais=document.getElementById('mod-pais').value;
   if(!newCargo&&!newJefe&&!newContrato&&!newFecha&&!newPais){showToast('⚠️ No hay cambios para guardar','warning');return;}
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   const currentEsLeal=emp.TipoContrato==='Nómina Leal';
   const newEsLeal=newContrato==='Nómina Leal';
   // Validar fecha Leal si es necesario
@@ -2741,7 +2749,7 @@ function onSimEmpChange(){
   const id=parseInt(document.getElementById('sim-emp').value);
   const info=document.getElementById('sim-emp-info');
   if(isNaN(id)){info.style.display='none';return;}
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   const hoy=calcEmployee(emp);
   const fin=calcProyeccion(emp);
   info.style.display='block';
@@ -2765,7 +2773,7 @@ function onSimDiasChange(){
   const id=parseInt(document.getElementById('sim-emp').value);
   const prev=document.getElementById('sim-preview-add');
   if(isNaN(id)){prev.style.display='none';return;}
-  const emp=BASE_DATA[id];
+  const emp=empById(id);
   const fin=calcProyeccion(emp);
   const dLey=parseFloat(document.getElementById('sim-dias-ley').value)||0;
   const dLeal=parseFloat(document.getElementById('sim-dias-leal').value)||0;
@@ -2789,7 +2797,7 @@ function agregarAlEscenario(){
   document.getElementById('sim-dias-ley').value=0;
   document.getElementById('sim-dias-leal').value=0;
   renderSimTabla();
-  showToast('✓ '+BASE_DATA[id].Empleado.split(' ')[0]+' agregado al escenario','success');
+  showToast('✓ '+empById(id).Empleado.split(' ')[0]+' agregado al escenario','success');
 }
 
 function agregarTodosLeales(){
@@ -2854,7 +2862,7 @@ function renderSimTabla(){
   wrap.style.display='block';empty.style.display='none';
 
   const filas=ids.map(id=>{
-    const emp=BASE_DATA[id];
+    const emp=empById(id);
     const fin=calcProyeccion(emp);
     const sc=escenario[id];
     const leyEsc=Math.max(0,Math.round((fin.neto_ley_fin-(sc.diasLey||0))*100)/100);
@@ -2904,7 +2912,7 @@ function renderSimTablaKpis(){
   // Recalcular solo KPIs sin re-renderizar toda la tabla
   const ids=Object.keys(escenario).map(Number);
   const filas=ids.map(id=>{
-    const emp=BASE_DATA[id];
+    const emp=empById(id);
     const fin=calcProyeccion(emp);
     const sc=escenario[id];
     const leyEsc=Math.max(0,Math.round((fin.neto_ley_fin-(sc.diasLey||0))*100)/100);
@@ -3248,7 +3256,7 @@ function onConsEmpChange(){
   var id=parseInt(sel.value);
   if(isNaN(id)||sel.value===''){res.style.display='none';return;}
 
-  var base=BASE_DATA[id];
+  var base=empById(id);
   var ov=overrides[id]||{};
   var d=calcEmployee(base);
   var esLeal=base.TipoContrato==='Nómina Leal';
@@ -3421,7 +3429,7 @@ function _consDesglose(id, base, ov, vt22, vt23, vt24, vt25, vt26, extraVac1){
 }
 
 function _consFormSolicitud(id, anio, diasPendientes){
-  var pais = BASE_DATA[id]?.Pais||'COL';
+  var pais = empById(id)?.Pais||'COL';
   return '<div style="padding-left:10px;margin-top:3px;">'+
     '<div style="display:flex;align-items:center;gap:8px;font-size:8px;color:var(--gy);">'+
       '<span style="font-style:italic;" id="hf-pend-'+id+'-'+anio+'">'+diasPendientes+'d pendientes de registrar</span>'+
@@ -3456,7 +3464,7 @@ function calcDiasForm(id, anio){
   if(!fi||!ff){diasEl.value='';infoEl.style.display='none';return;}
   var d1=new Date(fi+'T00:00:00'), d2=new Date(ff+'T00:00:00');
   if(d2<d1){diasEl.value='';infoEl.style.display='none';return;}
-  var pais=BASE_DATA[id]?.Pais||'COL';
+  var pais=empById(id)?.Pais||'COL';
   var nomPais=PAIS_NOMBRE[pais]||'locales';
   var res=diasHabiles(fi,ff,pais);
   diasEl.value=res.habiles;
@@ -3515,7 +3523,7 @@ function limpiarOverride2026(id, btn){
   if(!keys.length) delete overrides[id];
   marcarCambio();
   updateTopbar(); updateTicker(); renderMando();
-  showToast('✓ Override 2026 limpiado para '+BASE_DATA[id].Empleado.split(' ')[0],'success');
+  showToast('✓ Override 2026 limpiado para '+empById(id).Empleado.split(' ')[0],'success');
   // Refrescar el panel
   onConsEmpChange();
 }
