@@ -2374,12 +2374,26 @@ function exportarPublico(){
       h=rep1(h,'  populateJefeFilters();\n  if(loaded){renderLog();renderModifiedList();showToast(\'💾 Estado anterior restaurado automáticamente\',\'success\');}',
              '  populateJefeFilters();\n  /* public */\n  [\'panel-vac\',\'panel-nuevo\',\'panel-mod\',\'panel-hist\'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=\'none\';});\n  setMode=function(m){[\'panel-vac\',\'panel-nuevo\',\'panel-mod\',\'panel-hist\',\'panel-cons\'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=\'none\';});if(m===\'cons\'){var c=document.getElementById(\'panel-cons\');if(c)c.style.display=\'block\';}};\n  initConsEmpSelect();\n  renderAlertas();');
 
-      const blob=new Blob([h],{type:'text/html;charset=utf-8'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download='Dashboard_Vacaciones_Liberty_Public_'+dateStr+'.html';a.click();
-      URL.revokeObjectURL(url);
-      showToast('🌐 Versión pública exportada','success');
+      // Intentar guardar directo en la carpeta del proyecto vía servidor local
+      fetch('http://localhost:8731/save-public',{
+        method:'POST',
+        headers:{'Content-Type':'text/html; charset=utf-8'},
+        body:h
+      }).then(r=>r.json()).then(res=>{
+        if(res.ok){
+          showToast('🌐 Index_Vacaciones.html guardado en la carpeta del proyecto','success');
+        } else {
+          throw new Error(res.error||'Error desconocido');
+        }
+      }).catch(()=>{
+        // Si el servidor no está disponible (file://) → descarga normal
+        const blob=new Blob([h],{type:'text/html;charset=utf-8'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;a.download='Index_Vacaciones.html';a.click();
+        URL.revokeObjectURL(url);
+        showToast('🌐 Descargado como Index_Vacaciones.html','success');
+      });
     }).catch(e=>{showToast('Error al leer archivo: '+e.message,'error');console.error(e);});
   }catch(e){showToast('Error: '+e.message,'error');console.error(e);}
 }
