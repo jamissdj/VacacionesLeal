@@ -432,11 +432,16 @@ tbody td{padding:11px 14px;color:#2D3350;}
       <div class="emp-kpi-grid" id="emp-kpis"></div>
       <!-- Historical table -->
       <div class="emp-hist-section">
-        <h3>📅 Historial por año — Vacaciones Ley</h3>
-        <table class="emp-hist-table">
-          <thead><tr><th>Año</th><th>Días tomados</th><th>Observación</th></tr></thead>
-          <tbody id="emp-hist-tbody"></tbody>
-        </table>
+        <h3 onclick="toggleEmpHist()" style="cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;margin-bottom:0;">
+          📅 Historial por año — Vacaciones Ley
+          <span id="emp-hist-toggle" style="font-size:13px;color:var(--gy);margin-left:8px;">▲</span>
+        </h3>
+        <div id="emp-hist-body" style="margin-top:8px;">
+          <table class="emp-hist-table">
+            <thead><tr><th>Año</th><th>Días tomados</th><th>Observación</th></tr></thead>
+            <tbody id="emp-hist-tbody"></tbody>
+          </table>
+        </div>
       </div>
       <!-- Leal section (conditional) -->
       <div class="emp-hist-section" id="emp-leal-section" style="display:none;">
@@ -699,7 +704,7 @@ tbody td{padding:11px 14px;color:#2D3350;}
                   <input type="number" class="field-input" id="input-vac-leal" min="0" max="30" step="1" placeholder="0" value="0">
                 </div>
               </div>
-              <div id="leal-warning" style="display:none;" class="warn-box">⚠️ Esta persona tiene más de 14 días de vacaciones de ley disponibles. No puede solicitar días Leales aún.</div>
+              <div id="leal-warning" style="display:none;" class="warn-box">⚠️ Esta persona tiene más días de vacaciones de ley disponibles del umbral permitido. No puede solicitar días Leales aún.</div>
               <div style="font-size:8px;color:var(--gy);margin-top:4px;">⚙️ Estos días se SUMAN a las vacaciones ya registradas.</div>
             </div>
 
@@ -2317,12 +2322,15 @@ function checkLealWarning(){
   const esContrato=d.TipoContrato==='Contrato';
   const lealWrap=document.getElementById('leal-input-wrap');
   const lealWarn=document.getElementById('leal-warning');
+  // Umbral: PAN = 29 días (periodo legal 30d), COL = 14 días (periodo legal 15d)
+  const umbral = (d.Pais==='PAN') ? 29 : 14;
   if(esContrato||!d.AplicaLeal){
     lealWrap.style.opacity='0.4';
     document.getElementById('input-vac-leal').disabled=true;
     document.getElementById('input-vac-leal').value=0;
     lealWarn.style.display='none';
-  } else if(d.NetoVac1>14){
+  } else if(d.NetoVac1>umbral){
+    lealWarn.textContent='⚠️ Esta persona tiene más de '+umbral+' días de vacaciones de ley disponibles. No puede solicitar días Leales aún.';
     lealWarn.style.display='block';
     document.getElementById('input-vac-leal').disabled=true;
     document.getElementById('input-vac-leal').value=0;
@@ -4818,9 +4826,16 @@ function renderEmployeeDashboard(empId){
     document.getElementById('emp-leal-section').style.display='none';
   }
 
-  // Request form: show Leal option only if applies
+  // Request form: show Leal option only if applies AND employee is below threshold
   const lealOpt = document.getElementById('req-leal-opt');
-  if(lealOpt) lealOpt.style.display = d.AplicaLeal ? '' : 'none';
+  if(lealOpt){
+    const umbralPortal = (d.Pais==='PAN') ? 29 : 14;
+    const lealBloqueado = !d.AplicaLeal || d.NetoVac1 > umbralPortal;
+    lealOpt.style.display = lealBloqueado ? 'none' : '';
+    // Reset selector if leal was previously selected but now blocked
+    const reqTipo = document.getElementById('req-tipo');
+    if(lealBloqueado && reqTipo && reqTipo.value === 'leal') reqTipo.value = 'ley';
+  }
 
   // Store employee data for request form
   window._empForRequest = {base, d};
@@ -4828,6 +4843,15 @@ function renderEmployeeDashboard(empId){
   hideErr('req-form-ok');
   document.getElementById('req-form-ok').style.display='none';
   document.getElementById('req-form-err').style.display='none';
+}
+
+function toggleEmpHist(){
+  const body = document.getElementById('emp-hist-body');
+  const icon = document.getElementById('emp-hist-toggle');
+  if(!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  icon.textContent = isOpen ? '▼' : '▲';
 }
 
 function updateReqPreview(){
