@@ -468,6 +468,10 @@ tbody td{padding:11px 14px;color:#2D3350;}
               <option value="ley">Vacaciones Ley</option>
               <option value="leal" id="req-leal-opt" style="display:none;">Días adicionales Leal</option>
             </select>
+            <div id="req-leal-bloqueado-msg" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:6px;font-size:11px;color:#92400e;line-height:1.4;">
+              ⚠️ <strong>Días Leal no disponibles aún.</strong><br>
+              Primero debes usar tus vacaciones de ley hasta tener menos de <span id="req-leal-umbral-txt">15</span> días disponibles.
+            </div>
           </div>
           <div class="emp-form-group">
             <label>Días solicitados</label>
@@ -1175,12 +1179,15 @@ const _fb = {db:null, auth:null, user:null, ready:false};
   const fc = PORTAL_CONFIG.firebase;
   if(!fc || fc.apiKey==='YOUR_FIREBASE_API_KEY') return; // no configurado → modo solo localStorage
   try {
-    firebase.initializeApp({
-      apiKey:fc.apiKey, authDomain:fc.authDomain,
-      databaseURL:fc.databaseURL, projectId:fc.projectId, appId:fc.appId
-    });
-    _fb.db   = firebase.database();
-    _fb.auth = firebase.auth();
+    // Reutilizar app si ya está inicializada (evita error en recarga de página)
+    const _fbApp = firebase.apps.length
+      ? firebase.app()
+      : firebase.initializeApp({
+          apiKey:fc.apiKey, authDomain:fc.authDomain,
+          databaseURL:fc.databaseURL, projectId:fc.projectId, appId:fc.appId
+        });
+    _fb.db   = firebase.database(_fbApp);
+    _fb.auth = firebase.auth(_fbApp);
     _fb.ready = true;
     // Escuchar cambios en tiempo real (sync colaborativo entre pestañas/dispositivos)
     _fb.db.ref(LS_KEY).on('value', function(snap){
@@ -4828,13 +4835,22 @@ function renderEmployeeDashboard(empId){
 
   // Request form: show Leal option only if applies AND employee is below threshold
   const lealOpt = document.getElementById('req-leal-opt');
+  const lealMsg = document.getElementById('req-leal-bloqueado-msg');
+  const lealUmbralTxt = document.getElementById('req-leal-umbral-txt');
   if(lealOpt){
     const umbralPortal = (d.Pais==='PAN') ? 29 : 14;
-    const lealBloqueado = !d.AplicaLeal || d.NetoVac1 > umbralPortal;
-    lealOpt.style.display = lealBloqueado ? 'none' : '';
+    // AplicaLeal=false → ni mostrar ni explicar (contrato, no aplica)
+    // AplicaLeal=true pero sobre umbral → ocultar opción y mostrar explicación
+    const noAplica = !d.AplicaLeal;
+    const sobreUmbral = d.AplicaLeal && d.NetoVac1 > umbralPortal;
+    lealOpt.style.display = (noAplica || sobreUmbral) ? 'none' : '';
+    if(lealMsg){
+      lealMsg.style.display = sobreUmbral ? 'block' : 'none';
+      if(lealUmbralTxt) lealUmbralTxt.textContent = umbralPortal;
+    }
     // Reset selector if leal was previously selected but now blocked
     const reqTipo = document.getElementById('req-tipo');
-    if(lealBloqueado && reqTipo && reqTipo.value === 'leal') reqTipo.value = 'ley';
+    if((noAplica || sobreUmbral) && reqTipo && reqTipo.value === 'leal') reqTipo.value = 'ley';
   }
 
   // Store employee data for request form
