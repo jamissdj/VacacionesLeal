@@ -2,8 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Vacaciones Liberty LLA · Consulta 2026-09-23</title>
+<title>Vacaciones Liberty LLA · Consulta 2026-10-14</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Firebase SDK (compat) — solo activo si PORTAL_CONFIG.firebase.apiKey está configurado -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 :root{
@@ -245,10 +250,251 @@ tbody td{padding:11px 14px;color:#2D3350;}
 .warn-box{background:rgba(255,192,0,.07);border:1px solid rgba(255,192,0,.28);border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:10px;color:#7A5800;}
 
 @media(max-width:1100px){.g2{grid-template-columns:1fr;}.mando-wrap{grid-template-columns:1fr;}}
+
+/* ══════════════════════════════════════
+   PORTAL DE EMPLEADOS — CSS
+   ══════════════════════════════════════ */
+.portal-overlay{position:fixed;inset:0;background:var(--dk);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:var(--sans);}
+.portal-overlay.hidden{display:none;}
+.portal-card{background:#1E293B;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:40px 44px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,.5);}
+.portal-logo{font-size:11px;color:rgba(255,255,255,.35);font-family:var(--mono);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;}
+.portal-title{font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;line-height:1.2;}
+.portal-sub{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:28px;}
+.portal-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;}
+.portal-mode-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:20px 16px;cursor:pointer;text-align:center;transition:all .2s;color:#fff;}
+.portal-mode-btn:hover{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.5);}
+.portal-mode-btn .pmb-icon{font-size:28px;display:block;margin-bottom:8px;}
+.portal-mode-btn .pmb-label{font-size:13px;font-weight:600;display:block;margin-bottom:3px;}
+.portal-mode-btn .pmb-desc{font-size:11px;color:rgba(255,255,255,.4);display:block;line-height:1.4;}
+.portal-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:11px 14px;color:#fff;font-size:14px;font-family:var(--sans);outline:none;transition:border .2s;margin-bottom:14px;}
+.portal-input:focus{border-color:#3B82F6;}
+.portal-input::placeholder{color:rgba(255,255,255,.3);}
+.portal-btn{width:100%;background:#3B82F6;border:none;border-radius:8px;padding:12px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;font-family:var(--sans);}
+.portal-btn:hover{background:#2563EB;}
+.portal-btn:disabled{background:rgba(255,255,255,.1);color:rgba(255,255,255,.3);cursor:not-allowed;}
+.portal-back{background:none;border:none;color:rgba(255,255,255,.4);font-size:12px;cursor:pointer;padding:8px 0 0;font-family:var(--sans);width:100%;}
+.portal-back:hover{color:rgba(255,255,255,.7);}
+.portal-err{background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);border-radius:6px;padding:10px 12px;font-size:12px;color:#FCA5A5;margin-bottom:12px;display:none;}
+.portal-ok{background:rgba(22,163,74,.15);border:1px solid rgba(22,163,74,.3);border-radius:6px;padding:10px 12px;font-size:12px;color:#86EFAC;margin-bottom:12px;display:none;}
+.portal-otp-hint{font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:14px;line-height:1.5;}
+.portal-timer{font-family:var(--mono);color:#3B82F6;}
+.portal-admin-pw{position:relative;}
+.portal-admin-pw input{padding-right:44px;}
+.portal-pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-60%);background:none;border:none;color:rgba(255,255,255,.35);cursor:pointer;font-size:16px;}
+/* Employee Dashboard */
+.emp-dash{background:var(--bg);min-height:100vh;font-family:var(--sans);}
+.emp-hdr{background:var(--dk);padding:16px 24px 14px;display:flex;align-items:center;justify-content:space-between;}
+.emp-hdr-left h1{font-size:16px;font-weight:700;color:#fff;margin:0;}
+.emp-hdr-left p{font-size:11px;color:rgba(255,255,255,.4);margin:2px 0 0;font-family:var(--mono);}
+.emp-hdr-right button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:7px 14px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;font-family:var(--sans);}
+.emp-body{max-width:740px;margin:0 auto;padding:28px 24px;}
+.emp-profile{display:flex;align-items:center;gap:14px;margin-bottom:24px;}
+.emp-avatar{width:48px;height:48px;border-radius:50%;background:#1D4ED8;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;}
+.emp-profile-info h2{font-size:17px;font-weight:700;margin:0 0 2px;}
+.emp-profile-info p{font-size:12px;color:var(--gy);margin:0;}
+.emp-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+.emp-kpi{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px 14px;position:relative;overflow:hidden;}
+.emp-kpi-bar{position:absolute;top:0;left:0;right:0;height:3px;}
+.emp-kpi-label{font-size:10px;color:var(--gy);text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);margin-bottom:5px;}
+.emp-kpi-value{font-size:24px;font-weight:800;font-family:var(--mono);line-height:1;}
+.emp-kpi-value.neg{color:var(--dr);}
+.emp-kpi-value.pos{color:var(--gr);}
+.emp-kpi-value.neu{color:var(--dk);}
+.emp-kpi-desc{font-size:11px;color:var(--gy);margin-top:4px;}
+.emp-hist-section{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:20px;}
+.emp-hist-section h3{font-size:13px;font-weight:700;margin:0 0 12px;color:var(--dk2);}
+.emp-hist-table{width:100%;border-collapse:collapse;font-size:12px;}
+.emp-hist-table th{background:var(--lg);padding:7px 10px;text-align:left;font-weight:600;color:var(--gy);font-size:10px;text-transform:uppercase;letter-spacing:.4px;}
+.emp-hist-table td{padding:7px 10px;border-bottom:1px solid var(--bd);}
+/* Request Form */
+.emp-req-section{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:20px;margin-bottom:20px;}
+.emp-req-section h3{font-size:13px;font-weight:700;margin:0 0 14px;color:var(--dk2);}
+.emp-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.emp-form-group{display:flex;flex-direction:column;gap:4px;}
+.emp-form-group label{font-size:11px;font-weight:600;color:var(--gy);text-transform:uppercase;letter-spacing:.4px;}
+.emp-form-group select,.emp-form-group input,.emp-form-group textarea{background:var(--lg);border:1px solid var(--bd);border-radius:6px;padding:9px 11px;font-size:13px;font-family:var(--sans);color:var(--dk);outline:none;transition:border .15s;}
+.emp-form-group select:focus,.emp-form-group input:focus,.emp-form-group textarea:focus{border-color:#3B82F6;}
+.emp-form-group textarea{resize:vertical;min-height:72px;}
+.emp-submit-btn{background:#3B82F6;border:none;border-radius:7px;padding:11px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:background .15s;}
+.emp-submit-btn:hover{background:#2563EB;}
+.emp-submit-btn:disabled{background:var(--mg);cursor:not-allowed;}
+.emp-req-preview{background:var(--lg);border-radius:6px;padding:12px;font-size:12px;color:var(--gy);margin-top:8px;display:none;}
+.emp-req-preview strong{color:var(--dk);display:block;margin-bottom:4px;}
+.emp-note-info{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:10px 12px;font-size:12px;color:#1E40AF;margin-bottom:14px;}
+
 </style>
 <style id="public-overrides">.mode-selector{display:none!important}.mando-wrap{grid-template-columns:1fr!important}#tab-mando .mando-wrap>div:last-child{display:none!important}#panel-cons button[onclick*="eliminarSolicitud"]{display:none!important}#panel-cons button[onclick*="agregarFechasHistorico"]{display:none!important}#panel-cons button[onclick*="guardarFechasHistorico"]{display:none!important}#panel-cons .filter-reset{display:none!important}</style>
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════════════════
+     MODO SELECTOR — se muestra al abrir el archivo
+     ═══════════════════════════════════════════════════ -->
+<div class="portal-overlay" id="portal-mode-selector">
+  <div class="portal-card">
+    <div class="portal-logo">Liberty Latin America · AI & Advanced Analytics</div>
+    <div class="portal-title">🏖️ Portal de Vacaciones</div>
+    <div class="portal-sub">¿Con qué perfil ingresas hoy?</div>
+    <div class="portal-mode-grid">
+      <button class="portal-mode-btn" onclick="selectEmployeeMode()">
+        <span class="pmb-icon">👤</span>
+        <span class="pmb-label">Empleado</span>
+        <span class="pmb-desc">Consultar saldo y solicitar vacaciones</span>
+      </button>
+      <button class="portal-mode-btn" onclick="selectAdminMode()">
+        <span class="pmb-icon">🔐</span>
+        <span class="pmb-label">Administrador</span>
+        <span class="pmb-desc">Acceso completo al dashboard de gestión</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     ADMIN LOGIN — contraseña de administrador
+     ═══════════════════════════════════════════════════ -->
+<div class="portal-overlay hidden" id="portal-admin-login">
+  <div class="portal-card">
+    <div class="portal-logo">Modo Administrador</div>
+    <div class="portal-title">🔐 Acceso restringido</div>
+    <div class="portal-sub">Ingresa la contraseña de administrador</div>
+    <div id="admin-err" class="portal-err">Contraseña incorrecta. Intenta de nuevo.</div>
+    <div class="portal-admin-pw">
+      <input class="portal-input" type="password" id="admin-pw-input" placeholder="Contraseña"
+             onkeydown="if(event.key==='Enter')verifyAdminPw()">
+      <button class="portal-pw-toggle" onclick="togglePwVis('admin-pw-input',this)">👁</button>
+    </div>
+    <button class="portal-btn" onclick="verifyAdminPw()">Ingresar al dashboard</button>
+    <button class="portal-back" onclick="backToModeSelector()">← Volver</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     EMPLOYEE PORTAL — OTP + vista personal
+     ═══════════════════════════════════════════════════ -->
+<div class="portal-overlay hidden" id="portal-employee">
+  <!-- STEP 1: email input -->
+  <div class="portal-card" id="portal-step-email">
+    <div class="portal-logo">Portal Empleados · Liberty Latin America</div>
+    <div class="portal-title">🏖️ Mis Vacaciones</div>
+    <div class="portal-sub">Ingresa tu correo corporativo para continuar</div>
+    <div id="email-err" class="portal-err"></div>
+    <input class="portal-input" type="email" id="emp-email-input"
+           placeholder="tu.nombre@lla.com"
+           onkeydown="if(event.key==='Enter')sendPortalOTP()">
+    <button class="portal-btn" id="btn-send-otp" onclick="sendPortalOTP()">
+      Enviar código de acceso
+    </button>
+    <button class="portal-back" onclick="backToModeSelector()">← Volver</button>
+  </div>
+  <!-- STEP 2: OTP verification -->
+  <div class="portal-card hidden" id="portal-step-otp">
+    <div class="portal-logo">Verificación de acceso</div>
+    <div class="portal-title">📬 Revisa tu correo</div>
+    <div id="otp-sent-to" class="portal-sub"></div>
+    <div id="otp-err" class="portal-err"></div>
+    <div id="otp-ok" class="portal-ok"></div>
+    <p class="portal-otp-hint">
+      Te enviamos un código de 6 dígitos. Válido por <span class="portal-timer" id="otp-timer">10:00</span>
+    </p>
+    <input class="portal-input" type="text" id="otp-input" maxlength="6"
+           placeholder="000000" style="text-align:center;font-size:22px;font-family:var(--mono);letter-spacing:4px;"
+           oninput="this.value=this.value.replace(/\D/g,'')"
+           onkeydown="if(event.key==='Enter')verifyPortalOTP()">
+    <button class="portal-btn" onclick="verifyPortalOTP()">Verificar código</button>
+    <button class="portal-back" onclick="backToEmailStep()">← Cambiar correo · <span id="otp-resend-hint"></span></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     EMPLOYEE DASHBOARD — vista personal
+     ═══════════════════════════════════════════════════ -->
+<div id="emp-dashboard" class="emp-dash hidden portal-overlay" style="align-items:flex-start;overflow-y:auto;">
+  <div style="width:100%;">
+    <div class="emp-hdr">
+      <div class="emp-hdr-left">
+        <h1>🏖️ Mis Vacaciones — Liberty Latin America</h1>
+        <p id="emp-hdr-date"></p>
+      </div>
+      <div class="emp-hdr-right">
+        <button onclick="empLogout()">⬅ Cerrar sesión</button>
+      </div>
+    </div>
+    <div class="emp-body">
+      <div class="emp-profile">
+        <div class="emp-avatar" id="emp-avatar">—</div>
+        <div class="emp-profile-info">
+          <h2 id="emp-profile-name">—</h2>
+          <p id="emp-profile-meta">—</p>
+        </div>
+      </div>
+      <!-- KPI cards -->
+      <div class="emp-kpi-grid" id="emp-kpis"></div>
+      <!-- Historical table -->
+      <div class="emp-hist-section">
+        <h3>📅 Historial por año — Vacaciones Ley</h3>
+        <table class="emp-hist-table">
+          <thead><tr><th>Año</th><th>Días tomados</th><th>Observación</th></tr></thead>
+          <tbody id="emp-hist-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Leal section (conditional) -->
+      <div class="emp-hist-section" id="emp-leal-section" style="display:none;">
+        <h3>⭐ Días adicionales Leal</h3>
+        <table class="emp-hist-table">
+          <thead><tr><th>Concepto</th><th>Días</th></tr></thead>
+          <tbody id="emp-leal-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Request form -->
+      <div class="emp-req-section">
+        <h3>📤 Solicitar días de vacaciones</h3>
+        <div class="emp-note-info">
+          💡 Al enviar tu solicitud, tu jefe directo recibirá un correo para autorización.
+          Recuerda acordar las fechas con anticipación.
+        </div>
+        <div id="req-form-err" class="portal-err" style="color:#FCA5A5;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.2);border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:12px;display:none;"></div>
+        <div id="req-form-ok" class="portal-ok" style="color:#86EFAC;background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.2);border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:12px;display:none;"></div>
+        <div class="emp-form-row">
+          <div class="emp-form-group">
+            <label>Tipo de vacaciones</label>
+            <select id="req-tipo" onchange="updateReqPreview()">
+              <option value="">— Selecciona —</option>
+              <option value="ley">Vacaciones Ley</option>
+              <option value="leal" id="req-leal-opt" style="display:none;">Días adicionales Leal</option>
+            </select>
+          </div>
+          <div class="emp-form-group">
+            <label>Días solicitados</label>
+            <input type="number" id="req-dias" min="0.5" step="0.5" placeholder="auto"
+                   oninput="this._manuallyEdited=true;updateReqPreview()"
+                   onchange="updateReqPreview()">
+          </div>
+        </div>
+        <div class="emp-form-row">
+          <div class="emp-form-group">
+            <label>Fecha inicio</label>
+            <input type="date" id="req-fi" onchange="updateReqPreview()">
+          </div>
+          <div class="emp-form-group">
+            <label>Fecha fin (aprox.)</label>
+            <input type="date" id="req-ff" onchange="updateReqPreview()">
+          </div>
+        </div>
+        <div class="emp-form-group" style="margin-bottom:14px;">
+          <label>Notas adicionales (opcional)</label>
+          <textarea id="req-notas" placeholder="Ej: coordinar cobertura con..."></textarea>
+        </div>
+        <div class="emp-req-preview" id="req-preview"></div>
+        <br>
+        <button class="emp-submit-btn" id="req-submit-btn" onclick="submitVacRequest()">
+          📤 Enviar solicitud a mi jefe
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- HEADER -->
 <div class="hdr">
@@ -279,6 +525,8 @@ tbody td{padding:11px 14px;color:#2D3350;}
     <span class="sb-val" id="sb-changes-count">0</span>
   </div>
   <div class="sb-spacer"></div>
+  <!-- Firebase status badge (visible solo cuando Firebase está configurado) -->
+  <span id="fb-status-badge" style="font-size:10px;font-weight:600;color:#9ca3af;margin-right:8px;white-space:nowrap;display:none;"></span>
   <!-- Botones principales -->
   <button class="sb-btn sb-btn-primary" onclick="document.getElementById('load-excel-input').click()" title="Cargar Excel de vacaciones">📥 Cargar Excel</button>
   <button class="sb-btn sb-btn-publish" onclick="exportarPublico()" title="Guardar versión pública para gerentes">🌐 Versión pública</button>
@@ -826,21 +1074,21 @@ tbody td{padding:11px 14px;color:#2D3350;}
 // ══════════════════════════════════════════
 const BASE_DATA = [
   // ── NÓMINA ORIGINAL (actualizada al 21-Jul-2026) ──
-  {id:0,  Pais:'COL',Empleado:'ANA MILENA PIAMONTE PALACIO',         TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'ASSOCIATE MANAGER',                    Inicio:'2025-07-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:3.56, AplicaLeal:true,  Leal2025:5},
+  {id:0,  Pais:'COL',Empleado:'ANA MILENA PIAMONTE PALACIO',         TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'ASSOCIATE MANAGER',                    Inicio:'2025-07-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:1,    AplicaLeal:true,  Leal2025:5},
   {id:1,  Pais:'COL',Empleado:'ANDRES ENRIQUE MARIN ZAMBRANO',       TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'AI TECH SPECIALIST',                   Inicio:'2025-12-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:2,  Pais:'COL',Empleado:'ANGELA PATRICIA PALACINO CAVIEDES',   TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST',                           Inicio:'2025-06-03',VT22:0,VT23:0,VT24:0,VT25:0,VT26:1,  DiasTomados2:4.18, AplicaLeal:true,  Leal2025:5},
+  {id:2,  Pais:'COL',Empleado:'ANGELA PATRICIA PALACINO CAVIEDES',   TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST',                           Inicio:'2025-06-03',VT22:0,VT23:0,VT24:0,VT25:0,VT26:1,  DiasTomados2:2,    AplicaLeal:true,  Leal2025:5},
   {id:3,  Pais:'COL',Empleado:'ANGIE BRIGGITTE RODRIGUEZ FRANCO',    TipoContrato:'Contrato',   JefeDirecto:'Carlos Ruíz',  Cargo:'AI DELIVERY SR. ANALYST',              Inicio:'2025-11-26',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:4,  Pais:'COL',Empleado:'BENJAMIN LEON FIGUEROA',              TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SENIOR ANALYST, BUSINESS ANALYTICS',   Inicio:'2023-05-15',VT22:0,VT23:2,VT24:15,VT25:9,VT26:20, DiasTomados2:2.90, AplicaLeal:true,  Leal2025:5},
+  {id:4,  Pais:'COL',Empleado:'BENJAMIN LEON FIGUEROA',              TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SENIOR ANALYST, BUSINESS ANALYTICS',   Inicio:'2023-05-15',VT22:0,VT23:2,VT24:15,VT25:9,VT26:20, DiasTomados2:3,    AplicaLeal:true,  Leal2025:5},
   {id:5,  Pais:'COL',Empleado:'CAMILO OBERNDORFER MEJIA',            TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA SCIENTIST',                       Inicio:'2024-11-26',VT22:0,VT23:0,VT24:0,VT25:14,VT26:0, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:6,  Pais:'COL',Empleado:'CRISTHIAN CAMILO MARQUEZ ROJAS',      TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'DATA QUALITY ANALYST',                 Inicio:'2025-02-01',VT22:0,VT23:0,VT24:0,VT25:4,VT26:1,  DiasTomados2:0.51, AplicaLeal:true,  Leal2025:5},
-  {id:7,  Pais:'COL',Empleado:'DANIEL EDUARDO CASTAÑO OLIVEROS',     TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST BUSINESS ANALYTICS',        Inicio:'2024-07-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:4.75, AplicaLeal:true,  Leal2025:5},
-  {id:8,  Pais:'COL',Empleado:'DANIEL ROJO SUAREZ',                  TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'NETWORK AND PRODUCT SENIOR MANAGER',   Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:8,  DiasTomados2:1.11, AplicaLeal:true,  Leal2025:5},
+  {id:7,  Pais:'COL',Empleado:'DANIEL EDUARDO CASTAÑO OLIVEROS',     TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST BUSINESS ANALYTICS',        Inicio:'2024-07-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
+  {id:8,  Pais:'COL',Empleado:'DANIEL ROJO SUAREZ',                  TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'NETWORK AND PRODUCT SENIOR MANAGER',   Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:8,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:9,  Pais:'COL',Empleado:'DANILO PLAZAS IREÑO',                 TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'DATA ENGINEER',                        Inicio:'2024-04-01',VT22:0,VT23:0,VT24:0,VT25:5,VT26:15, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:10, Pais:'COL',Empleado:'DIANA MELISSA LONDOÑO CELIS',         TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'SENIOR BUSINESS ANALYST',              Inicio:'2025-03-01',VT22:0,VT23:0,VT24:0,VT25:10,VT26:6, DiasTomados2:0.89, AplicaLeal:true,  Leal2025:5},
+  {id:10, Pais:'COL',Empleado:'DIANA MELISSA LONDOÑO CELIS',         TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'SENIOR BUSINESS ANALYST',              Inicio:'2025-03-01',VT22:0,VT23:0,VT24:0,VT25:10,VT26:6, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:11, Pais:'COL',Empleado:'ERICK MAURICIO TRANSLATEUR MARTINEZ', TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'SR MANAGER DATA SCIENCE',              Inicio:'2024-04-08',VT22:0,VT23:0,VT24:0,VT25:0,VT26:11, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:12, Pais:'COL',Empleado:'ERIKA GIOVANNA TORRES CIFUENTES',     TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'IA SPECIALIST (LIBERTY)',              Inicio:'2025-10-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:3.82, AplicaLeal:true,  Leal2025:5},
+  {id:12, Pais:'COL',Empleado:'ERIKA GIOVANNA TORRES CIFUENTES',     TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'IA SPECIALIST (LIBERTY)',              Inicio:'2025-10-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:13, Pais:'PAN',Empleado:'FRANCISCO KEHRHAHN PADRON',           TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'MANAGER',                              Inicio:'2024-05-01',VT22:0,VT23:0,VT24:0,VT25:18,VT26:0, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:14, Pais:'COL',Empleado:'GREGORIO PEREZ BERNAL',               TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA ENGINEER',                        Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:6,VT26:0,  DiasTomados2:2.11, AplicaLeal:true,  Leal2025:5},
+  {id:14, Pais:'COL',Empleado:'GREGORIO PEREZ BERNAL',               TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA ENGINEER',                        Inicio:'2025-03-17',VT22:0,VT23:0,VT24:0,VT25:6,VT26:0,  DiasTomados2:1,    AplicaLeal:true,  Leal2025:5},
   {id:15, Pais:'COL',Empleado:'HERNAN SEBASTIAN TEJADA MORA',        TipoContrato:'Contrato',   JefeDirecto:'Carlos Ruíz',  Cargo:'CUSTOMER DATA DEMAND OPS',             Inicio:'2025-01-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:2,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:16, Pais:'COL',Empleado:'JAMIS HERNANDO GARZON PORRAS',        TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'PMO',                                  Inicio:'2026-01-15',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:17, Pais:'COL',Empleado:'JEAN PAUL RODRIGUEZ MORENO',                 TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA SCIENTIST',                       Inicio:'2024-07-08',VT22:0,VT23:0,VT24:0,VT25:14,VT26:0, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
@@ -850,7 +1098,7 @@ const BASE_DATA = [
   {id:21, Pais:'COL',Empleado:'JOSE DAVID LARSEN PANTOJA',           TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'NETWORK AND PRODUCT ANALYTICS ANALYST',Inicio:'2026-03-24',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
   {id:22, Pais:'COL',Empleado:'JUAN DIEGO VELASQUEZ ANGEL',          TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'SR BUSINESS INTELLIGENCE ANALYST',     Inicio:'2024-02-01',VT22:0,VT23:0,VT24:0,VT25:3,VT26:1,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:23, Pais:'COL',Empleado:'JUAN FELIPE CUCALON BALCAZAR',        TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'BUSINESS ANALYTICS ANALYST',           Inicio:'2023-02-01',VT22:0,VT23:0,VT24:1,VT25:5,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
-  {id:24, Pais:'COL',Empleado:'JULIAN MONSALVE ACEVEDO',             TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST',                           Inicio:'2024-11-04',VT22:0,VT23:0,VT24:0,VT25:10,VT26:2, DiasTomados2:1.29, AplicaLeal:true,  Leal2025:5},
+  {id:24, Pais:'COL',Empleado:'JULIAN MONSALVE ACEVEDO',             TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'SR ANALYST',                           Inicio:'2024-11-04',VT22:0,VT23:0,VT24:0,VT25:10,VT26:2, DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:25, Pais:'COL',Empleado:'JULIANA HURTADO CORTES',              TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',  Cargo:'AI DELIVERY MANAGER',                  Inicio:'2026-02-16',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
   {id:26, Pais:'COL',Empleado:'JULIANA RESTREPO TOBAR',              TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'DATA SCIENTIST',                       Inicio:'2025-12-09',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:4.77, AplicaLeal:true,  Leal2025:5},
   {id:27, Pais:'COL',Empleado:'LIA MARGARITA GARCIA HENAO',          TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'BUSINESS ANALYTICS ASSOCIATE MANAGER', Inicio:'2023-01-23',VT22:0,VT23:6,VT24:11,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
@@ -858,7 +1106,7 @@ const BASE_DATA = [
   {id:29, Pais:'COL',Empleado:'NATALIA JIMENEZ RAMIREZ',             TipoContrato:'Contrato',   JefeDirecto:'Carlos Ruíz',  Cargo:'AI STRATEGY & DELIVERY LEAD',          Inicio:'2026-02-17',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:30, Pais:'MEX',Empleado:'NICOLE CASTRO CAMPOS',                TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'CBM BUSINESS ANALYST OPS',             Inicio:'2024-01-10',VT22:0,VT23:0,VT24:6,VT25:0,VT26:10, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:31, Pais:'COL',Empleado:'PABLO FAJARDO JARAMILLO',             TipoContrato:'Contrato',   JefeDirecto:'Jeanette Gampel',Cargo:'PRESTACIÓN SERVICIOS (LIBERTY)',        Inicio:'2024-12-01',VT22:0,VT23:0,VT24:0,VT25:12,VT26:9, DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
-  {id:32, Pais:'COL',Empleado:'PAOLA CRISTINA GUTIERREZ GIL',        TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'SITE RELIABILITY ENGINEER',            Inicio:'2025-05-26',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:2.07, AplicaLeal:true,  Leal2025:5},
+  {id:32, Pais:'COL',Empleado:'PAOLA CRISTINA GUTIERREZ GIL',        TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'SITE RELIABILITY ENGINEER',            Inicio:'2025-05-26',VT22:0,VT23:0,VT24:0,VT25:5,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
   {id:33, Pais:'PAN',Empleado:'ROLANDO ESTEBAN RILEY RODRIGUEZ',     TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'JR DATA ENGINEER',                     Inicio:'2025-03-24',VT22:0,VT23:0,VT24:0,VT25:1,VT26:5,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:34, Pais:'COL',Empleado:'SANTIAGO GONZALEZ QUIROZ',            TipoContrato:'Contrato',   JefeDirecto:'Iván Gómez',    Cargo:'IA MANAGER',                           Inicio:'2025-01-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:5,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:35, Pais:'COL',Empleado:'SANTIAGO MONSALVE ACEVEDO',           TipoContrato:'Nómina Leal',JefeDirecto:'Jeanette Gampel',Cargo:'BUSINESS SPECIALIST',                  Inicio:'2023-03-01',VT22:0,VT23:8,VT24:0,VT25:6,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:5},
@@ -879,7 +1127,200 @@ const BASE_DATA = [
   {id:49, Pais:'COL',Empleado:'JAIME TOLE CLAVIJO',                  TipoContrato:'Contrato',   JefeDirecto:'Mauricio Romero',  Cargo:'IA TRANSFORMATION CONSULTANT',         Inicio:'2026-07-27',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:false, Leal2025:0},
   {id:50, Pais:'COL',Empleado:'LAURA ROMERO',                        TipoContrato:'Nómina Leal',JefeDirecto:'Juan David Rodríguez',    Cargo:'ANALYST',                              Inicio:'2026-08-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
   {id:51, Pais:'COL',Empleado:'JUAN SEBASTIAN VALENCIA',             TipoContrato:'Nómina Leal',JefeDirecto:'Iván Gómez',    Cargo:'ANALYST',                              Inicio:'2026-08-01',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
+  {id:52, Pais:'COL',Empleado:'DANIEL ALFONSO SILVA BARRERA',        TipoContrato:'Nómina Leal',JefeDirecto:'Carlos Ruíz',   Cargo:'ANALYST',                              Inicio:'2026-09-07',VT22:0,VT23:0,VT24:0,VT25:0,VT26:0,  DiasTomados2:0,    AplicaLeal:true,  Leal2025:0},
 ];
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// PORTAL CONFIG — editar antes de distribuir
+// ══════════════════════════════════════════════════════════════════════════
+const PORTAL_CONFIG = {
+  adminPassword: 'LLA2026admin',              // ← cambiar antes de distribuir
+  adminEmail:    'jamis.garzon@lla.com',       // ← CC en todas las solicitudes
+  emailjs: {
+    publicKey:       'YOUR_EMAILJS_PUBLIC_KEY',   // ← de emailjs.com → Account → API Keys
+    serviceId:       'YOUR_EMAILJS_SERVICE_ID',   // ← Email Services → Service ID
+    otpTemplate:     'YOUR_OTP_TEMPLATE_ID',      // ← Email Templates → template OTP
+    requestTemplate: 'YOUR_REQUEST_TEMPLATE_ID'   // ← Email Templates → template solicitud
+  },
+  // ── Firebase Realtime Database ─────────────────────────────────────────────
+  // Pasos para activar:
+  //   1. Firebase Console → tu proyecto → Realtime Database → Crear base de datos
+  //   2. Reglas: { "rules": { "liberty_vac_v3": { ".read":"auth!=null", ".write":"auth!=null" } } }
+  //   3. Authentication → Sign-in method → Email/Password → Activar
+  //   4. Authentication → Users → Agregar usuario (tu email + contraseña)
+  //   5. Completar los campos de abajo con tus credenciales
+  firebase: {
+    apiKey:       'AIzaSyClXqalqtEFxc7Wz-C0oNYscZbr5vAaN7o',
+    authDomain:   'vacaciones-lla-leal.firebaseapp.com',
+    databaseURL:  'https://vacaciones-lla-leal-default-rtdb.firebaseio.com',
+    projectId:    'vacaciones-lla-leal',
+    appId:        '1:75005738422:web:b5a24d697a18c96ef11517',
+    authEmail:    'jamis.garzon@lla.com',
+    authPassword: 'MiJesus1'
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// FIREBASE SYNC — Realtime Database con localStorage como respaldo offline
+// ══════════════════════════════════════════════════════════════════════════
+const _fb = {db:null, auth:null, user:null, ready:false};
+
+(function _initFirebase(){
+  const fc = PORTAL_CONFIG.firebase;
+  if(!fc || fc.apiKey==='YOUR_FIREBASE_API_KEY') return; // no configurado → modo solo localStorage
+  try {
+    firebase.initializeApp({
+      apiKey:fc.apiKey, authDomain:fc.authDomain,
+      databaseURL:fc.databaseURL, projectId:fc.projectId, appId:fc.appId
+    });
+    _fb.db   = firebase.database();
+    _fb.auth = firebase.auth();
+    _fb.ready = true;
+    // Escuchar cambios en tiempo real (sync colaborativo entre pestañas/dispositivos)
+    _fb.db.ref(LS_KEY).on('value', function(snap){
+      const fbData = snap.val();
+      if(!fbData || fbData.version!==2) return;
+      const localRaw = localStorage.getItem(LS_KEY);
+      const localSnap = localRaw ? JSON.parse(localRaw) : null;
+      // Solo aplicar si Firebase tiene datos más recientes
+      if(localSnap && localSnap.savedAt && fbData.savedAt && fbData.savedAt <= localSnap.savedAt) return;
+      applySnapshot(fbData);
+      localStorage.setItem(LS_KEY, JSON.stringify(fbData));
+      updateStorageBar(fbData);
+      recalcularTodo();
+      _fbSetStatus('sync','☁️ Sincronizado desde Firebase');
+      console.log('[Firebase] Datos actualizados desde la nube:', fbData.savedAt);
+    });
+    _fbSetStatus('init','🔥 Firebase listo (solo lectura)');
+    console.log('[Firebase] Inicializado —', fc.projectId);
+  } catch(e){ console.warn('[Firebase] Error de inicialización:', e); _fbSetStatus('err','⚠️ Firebase error'); }
+})();
+
+async function _fbSignIn(){
+  if(!_fb.ready) return false;
+  if(_fb.user) return true; // ya autenticado
+  const fc = PORTAL_CONFIG.firebase;
+  if(!fc.authEmail || !fc.authPassword) return false;
+  try {
+    const cred = await _fb.auth.signInWithEmailAndPassword(fc.authEmail, fc.authPassword);
+    _fb.user = cred.user;
+    _fbSetStatus('ok','🔥 Firebase: admin conectado');
+    console.log('[Firebase] Autenticado como', _fb.user.email);
+    return true;
+  } catch(e){
+    console.warn('[Firebase] Error de autenticación:', e);
+    _fbSetStatus('err','⚠️ Firebase: error de auth');
+    return false;
+  }
+}
+
+async function _fbGuardar(snap){
+  if(!_fb.db || !_fb.user) return false;
+  try {
+    await _fb.db.ref(LS_KEY).set(snap);
+    _fbSetStatus('ok','☁️ Guardado en Firebase');
+    return true;
+  } catch(e){
+    console.warn('[Firebase] Error al guardar:', e);
+    _fbSetStatus('err','⚠️ Firebase: error al guardar');
+    return false;
+  }
+}
+
+function _fbSetStatus(tipo, texto){
+  const el = document.getElementById('fb-status-badge');
+  if(!el) return;
+  el.style.display = 'inline';
+  const color = tipo==='ok'||tipo==='sync' ? '#22c55e' : tipo==='err' ? '#f59e0b' : '#3b82f6';
+  el.style.color = color;
+  el.textContent = texto;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// EMAIL MAP — correos y jefes por ID de empleado (Ranking 13-Oct-2026)
+// ══════════════════════════════════════════════════════════════════════════
+const EMAIL_MAP = {
+  0:  {email:'ana.piamonte@lla.com',                manager:'juan.d.rodriguez@lla.com'},
+  1:  {email:'Andres.Zambrano@lla.com',              manager:'ivan.gomez@lla.com'},
+  2:  {email:'Angela.Palacino@lla.com',              manager:'juan.d.rodriguez@lla.com'},
+  3:  {email:'Angie.Rodriguez@lla.com',              manager:'carlos.ruiz@lla.com'},
+  4:  {email:'benjamin.leon@lla.com',                manager:'juan.d.rodriguez@lla.com'},
+  5:  {email:'Camilo.Oberndorfer@lla.com',           manager:'ivan.gomez@lla.com'},
+  6:  {email:'',                                     manager:'carlos.ruiz@lla.com'},
+  7:  {email:'daniel.castano@lla.com',               manager:'juan.d.rodriguez@lla.com'},
+  8:  {email:'Daniel.Rojo@lla.com',                  manager:'juan.d.rodriguez@lla.com'},
+  9:  {email:'danilo.plazas@libertycaribbean.com',   manager:'ivan.gomez@lla.com'},
+  10: {email:'melissa.londono@libertycaribbean.com', manager:'jeanette.gampel@lla.com'},
+  11: {email:'erick.translateur@lla.com',            manager:'ivan.gomez@lla.com'},
+  12: {email:'erika.cifuentes@lla.com',              manager:'ivan.gomez@lla.com'},
+  13: {email:'francisco.kehrhahn@lla.com',           manager:'jeanette.gampel@lla.com'},
+  14: {email:'Gregorio.Bernal@lla.com',              manager:'ivan.gomez@lla.com'},
+  15: {email:'Sebastian.Tejada@lla.com',             manager:'carlos.ruiz@lla.com'},
+  16: {email:'jamis.garzon@lla.com',                 manager:'jeanette.gampel@lla.com'},
+  17: {email:'',                                     manager:'ivan.gomez@lla.com'},
+  18: {email:'jenyfer.sierra@lla.com',               manager:'carlos.ruiz@lla.com'},
+  19: {email:'',                                     manager:'mromero@lla.com'},
+  20: {email:'Jose.Zerna@lla.com',                   manager:'ivan.gomez@lla.com'},
+  21: {email:'jose.larsenpantoja@lla.com',           manager:'juan.d.rodriguez@lla.com'},
+  22: {email:'',                                     manager:'carlos.ruiz@lla.com'},
+  23: {email:'Juan.Cucalon@libertycaribbean.com',    manager:'juan.d.rodriguez@lla.com'},
+  24: {email:'julian.acevedo@lla.com',               manager:'juan.d.rodriguez@lla.com'},
+  25: {email:'Juliana.Hurtado@lla.com',              manager:'carlos.ruiz@lla.com'},
+  26: {email:'',                                     manager:'ivan.gomez@lla.com'},
+  27: {email:'lia.garcia@libertycaribbean.com',      manager:'juan.d.rodriguez@lla.com'},
+  28: {email:'',                                     manager:'carlos.ruiz@lla.com'},
+  29: {email:'',                                     manager:'carlos.ruiz@lla.com'},
+  30: {email:'Nicole.Castro@libertycaribbean.com',   manager:'jeanette.gampel@lla.com'},
+  31: {email:'pablo.j.fajardo@libertycaribbean.com', manager:'jeanette.gampel@lla.com'},
+  32: {email:'Paola.GutierrezGil@lla.com',           manager:'ivan.gomez@lla.com'},
+  33: {email:'',                                     manager:'ivan.gomez@lla.com'},
+  34: {email:'santiago.quiroz@lla.com',              manager:'ivan.gomez@lla.com'},
+  35: {email:'santiago.monsalve@libertycaribbean.com',manager:'jeanette.gampel@lla.com'},
+  36: {email:'Sergio.Siabato@lla.com',               manager:'ivan.gomez@lla.com'},
+  37: {email:'Andres.Villarreal@lla.com',            manager:'ivan.gomez@lla.com'},
+  38: {email:'daniel.acevedo@lla.com',               manager:'ivan.gomez@lla.com'},
+  39: {email:'Pablo.Moreno@lla.com',                  manager:'jeanette.gampel@lla.com'},
+  40: {email:'Nelson.Pacheco@lla.com',               manager:'carlos.ruiz@lla.com'},
+  41: {email:'Diana.Zeledon@lla.com',                manager:'jeanette.gampel@lla.com'},
+  42: {email:'Carlos.Tovar@lla.com',                  manager:'ivan.gomez@lla.com'},
+  43: {email:'Luis.Vergara@lla.com',                  manager:'juan.d.rodriguez@lla.com'},
+  44: {email:'alejandro.pinzon@lla.com',             manager:'ivan.gomez@lla.com'},
+  45: {email:'Jose.MirandaDiaz@lla.com',             manager:'ivan.gomez@lla.com'},
+  46: {email:'esteban.palacio@lla.com',              manager:'ivan.gomez@lla.com'},
+  47: {email:'',                                     manager:'juan.d.rodriguez@lla.com'},
+  48: {email:'Rodrigo.Gonzalez@lla.com',             manager:'ivan.gomez@lla.com'},
+  49: {email:'jaime.tole@lla.com',                   manager:'mromero@lla.com'},
+  50: {email:'',                                     manager:'juan.d.rodriguez@lla.com'},
+  51: {email:'juan.v@lla.com',                       manager:'ivan.gomez@lla.com'},
+  52: {email:'daniel.silva@lla.com',                 manager:'carlos.ruiz@lla.com'},
+};
+// Empleados agregados vía Sync (IDs 53+) — lookup por nombre normalizado
+const EMAIL_MAP_NAMES = {
+  'JUAN FELIPE AGUDELO RIOS':     {email:'Juan.Agudelor@lla.com',     manager:'ivan.gomez@lla.com'},
+  'YADER IVAN MORENO RODRIGUEZ':  {email:'Yader.Rodriguez@lla.com',   manager:'mromero@lla.com'},
+  'IVAN LAVERDE':                  {email:'ivan.laverde@lla.com',      manager:'mromero@lla.com'},
+  'ALEJANDRO ANGEL DUQUE':         {email:'Alejandro.Angel@lla.com',   manager:'carlos.ruiz@lla.com'},
+  'SAMUEL ANGEL PEREZ':            {email:'Samuel.AngelPerez@lla.com', manager:'ivan.gomez@lla.com'},
+  'GLORIA NAYARA MELO RODRIGUEZ':  {email:'Nayara.Melo@lla.com',       manager:'carlos.ruiz@lla.com'},
+};
+function _normName(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim(); }
+function getEmailInfo(emp){
+  if(EMAIL_MAP[emp.id]&&EMAIL_MAP[emp.id].email) return EMAIL_MAP[emp.id];
+  return EMAIL_MAP_NAMES[_normName(emp.Empleado)]||{email:'',manager:PORTAL_CONFIG.adminEmail};
+}
+function findEmpByEmail(inputEmail){
+  const norm=inputEmail.toLowerCase().trim();
+  for(const [id,info] of Object.entries(EMAIL_MAP)){
+    if(info.email&&info.email.toLowerCase()===norm) return empById(parseInt(id));
+  }
+  for(const [name,info] of Object.entries(EMAIL_MAP_NAMES)){
+    if(info.email&&info.email.toLowerCase()===norm){
+      return BASE_DATA.find(e=>_normName(e.Empleado)===name)||null;
+    }
+  }
+  return null;
+}
 
 const ORIGINAL_DATA = BASE_DATA.map(e=>({...e}));
 const JEFE_COLORS = {'Juan R':'#466491','Ivan G':'#7AA95A','Carlos R':'#BE1E2E','Jeanette G':'#EA5B0C','Mauricio':'#6F6B6C','No':'#D9D9D9'};
@@ -1051,7 +1492,15 @@ function calcEmployee(base) {
 }
 
 function getActiveData() { return BASE_DATA.map(calcEmployee).filter(d=>d.Estado==='activo').sort((a,b)=>b.NetoVac1-a.NetoVac1); }
-function getAllData()     { return BASE_DATA.map(calcEmployee); }
+function getAllData() {
+  // Deduplicate by id: keep only the last entry for each id (same logic as empById)
+  const seen = {};
+  for (let i = BASE_DATA.length - 1; i >= 0; i--) {
+    const e = BASE_DATA[i];
+    if (!(e.id in seen)) seen[e.id] = e;
+  }
+  return Object.values(seen).map(calcEmployee);
+}
 function getRetiredData(){ return getAllData().filter(d=>d.Estado==='retirado'); }
 function fNum(n)         { return (Math.round(n*100)/100).toFixed(1); }
 
@@ -2137,7 +2586,8 @@ function empById(id){
 }
 
 // ── ADD NEW EMPLOYEE ──
-let nextId=BASE_DATA.length;
+const BASE_DATA_LEN = BASE_DATA.length; // tamaño fijo del array hardcodeado — NO cambiar
+let nextId=BASE_DATA_LEN;
 function addNewEmployee(){
   const nombre=document.getElementById('new-nombre').value.trim().toUpperCase();
   const pais=document.getElementById('new-pais').value;
@@ -2434,7 +2884,7 @@ function buildSnapshot(){
   return {
     version:2,savedAt:new Date().toISOString(),savedAtLabel:new Date().toLocaleString('es-CO'),
     overrides:overrides,
-    newEmployees:BASE_DATA.slice(49).map(e=>({...e})),
+    newEmployees:BASE_DATA.slice(BASE_DATA_LEN).map(e=>({...e})),
     employeeMutations:BASE_DATA.slice(0,49).map((e,i)=>({id:i,Cargo:e.Cargo,JefeDirecto:e.JefeDirecto,TipoContrato:e.TipoContrato,Inicio:e.Inicio,VT22:e.VT22,VT23:e.VT23,VT24:e.VT24,VT25:e.VT25,VT26:e.VT26,DiasTomados2:e.DiasTomados2,AplicaLeal:e.AplicaLeal,Leal2025:e.Leal2025})),
     actionLog:actionLog,nextId:nextId,
   };
@@ -2450,8 +2900,9 @@ function applySnapshot(snap){
     }
   });
   if(snap.newEmployees&&snap.newEmployees.length){
-    BASE_DATA.splice(49);
-    snap.newEmployees.forEach(e=>{ e.JefeDirecto=normJefe(e.JefeDirecto); BASE_DATA.push(e); });
+    BASE_DATA.splice(BASE_DATA_LEN);
+    const _hardcodedIds=new Set(BASE_DATA.map(e=>e.id));
+    snap.newEmployees.forEach(e=>{ if(!_hardcodedIds.has(e.id)){ e.JefeDirecto=normJefe(e.JefeDirecto); BASE_DATA.push(e); } });
   }
   overrides=snap.overrides||{};
   actionLog=snap.actionLog||[];
@@ -2460,8 +2911,15 @@ function applySnapshot(snap){
 }
 
 function guardarEnStorage(){
-  try{const snap=buildSnapshot();localStorage.setItem(LS_KEY,JSON.stringify(snap));_unsavedChanges=false;updateStorageBar(snap);return true;}
-  catch(e){console.error('localStorage error:',e);return false;}
+  try{
+    const snap=buildSnapshot();
+    localStorage.setItem(LS_KEY,JSON.stringify(snap));
+    _unsavedChanges=false;
+    updateStorageBar(snap);
+    // También guardar en Firebase si el admin está autenticado
+    if(_fb.user) _fbGuardar(snap);
+    return true;
+  }catch(e){console.error('localStorage error:',e);return false;}
 }
 
 function cargarDesdeStorage(){
@@ -2482,7 +2940,7 @@ function cargarDesdeStorage(){
 function updateStorageBar(snap){
   const dot=document.getElementById('sb-dot'),txt=document.getElementById('sb-status-text');
   const time=document.getElementById('sb-saved-time'),cnt=document.getElementById('sb-changes-count');
-  const totalChanges=Object.keys(overrides).length+BASE_DATA.slice(49).length;
+  const totalChanges=Object.keys(overrides).length+BASE_DATA.slice(BASE_DATA_LEN).length;
   if(snap&&snap.savedAt){dot.className='sb-dot saved';txt.textContent='Guardado en este navegador';time.textContent=snap.savedAtLabel||snap.savedAt;}
   else{dot.className='sb-dot none';txt.textContent='Sin datos guardados localmente';time.textContent='—';}
   cnt.textContent=totalChanges;
@@ -2554,8 +3012,9 @@ function exportarPublico(){
         '      _m.VT25=m.VT25||0;_m.VT26=m.VT26||0;_m.DiasTomados2=m.DiasTomados2||0;\n'+
         '      _m.AplicaLeal=!!m.AplicaLeal;_m.Leal2025=m.Leal2025||0;}\n'+
         '  });\n'+
-        '  BASE_DATA.splice(49);\n'+
-        '  d.newEmployees.forEach(function(e){BASE_DATA.push(e);});\n'+
+        '  BASE_DATA.splice(BASE_DATA_LEN);\n'+
+        '  var _hids=new Set(BASE_DATA.map(function(e){return e.id;}));\n'+
+        '  d.newEmployees.forEach(function(e){if(!_hids.has(e.id))BASE_DATA.push(e);});\n'+
         '  nextId=d.nextId;\n'+
         '  guardarEnStorage=function(){return true;};\n'+
         '  cargarDesdeStorage=function(){return false;};\n'+
@@ -2573,7 +3032,7 @@ function exportarPublico(){
 
       // ── 3. Título, subtítulo, storage-bar, tabs, CSS ──
       h=rep1(h,'<title>Vacaciones · Liberty 2026 v8</title>','<title>Vacaciones Liberty LLA · Consulta '+dateStr+'</title>');
-      h=rep1(h,'<span>Portal de consulta &nbsp;·&nbsp; <strong style="color:#FFC000;">Datos al 2026-09-23</strong></span>','<span>Portal de consulta &nbsp;·&nbsp; <strong style="color:#FFC000;">Datos al '+dateStr+'</strong></span>');
+      h=rep1(h,'<span>Portal de consulta &nbsp;·&nbsp; <strong style="color:#FFC000;">Datos al 2026-10-14</strong></span>','<span>Portal de consulta &nbsp;·&nbsp; <strong style="color:#FFC000;">Datos al '+dateStr+'</strong></span>');
       h=rep1(h,'<div class="storage-bar">','<div class="storage-bar" style="display:none">');
       h=rep1(h,'<div class="tab active" onclick="ST(\'mando\',this)">🎛️ Cuadro de Mando</div>','<div class="tab" onclick="ST(\'mando\',this)" style="display:none">🎛️ Cuadro de Mando</div>');
       h=rep1(h,'<div class="tab" onclick="ST(\'ranking\',this)">🏆 Ranking Pasivo</div>','<div class="tab" onclick="ST(\'ranking\',this)" style="display:none">🏆 Ranking Pasivo</div>');
@@ -2814,7 +3273,7 @@ function confirmarBorrarStorage(){
   showModal('¿Borrar todos los datos locales?',
     'Se eliminarán todos los cambios guardados en este navegador. Esta acción no se puede deshacer.',
     ()=>{
-      localStorage.removeItem(LS_KEY);overrides={};actionLog=[];BASE_DATA.splice(49);nextId=49;
+      localStorage.removeItem(LS_KEY);overrides={};actionLog=[];BASE_DATA.splice(BASE_DATA_LEN);nextId=BASE_DATA_LEN;
       ORIGINAL_DATA.forEach((o,i)=>{BASE_DATA[i].Cargo=o.Cargo;BASE_DATA[i].JefeDirecto=o.JefeDirecto;BASE_DATA[i].TipoContrato=o.TipoContrato;BASE_DATA[i].Inicio=o.Inicio;BASE_DATA[i].VT22=o.VT22;BASE_DATA[i].VT23=o.VT23;BASE_DATA[i].VT24=o.VT24;BASE_DATA[i].VT25=o.VT25;BASE_DATA[i].VT26=o.VT26;BASE_DATA[i].DiasTomados2=o.DiasTomados2;BASE_DATA[i].AplicaLeal=o.AplicaLeal;BASE_DATA[i].Leal2025=o.Leal2025;});
       _unsavedChanges=false;
       document.getElementById('sb-dot').className='sb-dot none';
@@ -3473,7 +3932,13 @@ function aplicarSyncDiff(idx, btn){
 function initConsEmpSelect(){
   var sel=document.getElementById('cons-emp');
   if(!sel) return;
-  var activos=BASE_DATA.filter(function(e){
+  // Deduplicate by id (keep last occurrence), then filter retirados
+  var seen={};
+  for(var i=BASE_DATA.length-1;i>=0;i--){
+    var e=BASE_DATA[i];
+    if(!(e.id in seen)) seen[e.id]=e;
+  }
+  var activos=Object.values(seen).filter(function(e){
     return (overrides[e.id]||{}).estado!=='retirado';
   }).sort(function(a,b){return a.Empleado.localeCompare(b.Empleado);});
   sel.innerHTML='<option value="">— Seleccionar empleado —</option>'+
@@ -3890,9 +4355,9 @@ function resetSalarios(){
 }
 
 // ══ INIT ══
-// ═══ VERSIÓN PÚBLICA — DATOS HORNEADOS 2026-09-23 ═══
+// ═══ VERSIÓN PÚBLICA — DATOS HORNEADOS 2026-10-14 ═══
 (function(){
-  var d=JSON.parse(decodeURIComponent(escape(atob('eyJvdmVycmlkZXMiOnsiMCI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoyLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6bnVsbCwiZmYiOm51bGwsImRpYXMiOjEsInRpcG8iOiJsZWFsIn0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDgtMTAiLCJmZiI6IjIwMjYtMDgtMTAiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMjEiLCJmZiI6IjIwMjYtMDktMjEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dLCJhZGRWVDI2IjowLCJhZGRMZWFsIjowLCJfbW9kaWZpZWQiOnRydWV9LCIxIjp7Il9tb2RpZmllZCI6dHJ1ZSwicGFpcyI6IlBBTiIsImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEzLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMjgiLCJmZiI6IjIwMjYtMTEtMTkiLCJkaWFzIjoxMywidGlwbyI6ImxleSJ9XX0sIjIiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MTMsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0xNyIsImZmIjoiMjAyNi0wOC0wNyIsImRpYXMiOjE0LCJ0aXBvIjoibGV5In1dfSwiMyI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo2LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMTYiLCJmZiI6IjIwMjYtMDYtMTYiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMTEiLCJmZiI6IjIwMjYtMDktMTQiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMDQiLCJmZiI6IjIwMjYtMDktMDgiLCJkaWFzIjozLCJ0aXBvIjoibGV5In1dfSwiNCI6e30sIjUiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wMS0yMCIsImZmIjoiMjAyNS0wMS0yMiIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNy0yOSIsImZmIjoiMjAyNS0wOC0xMyIsImRpYXMiOjExLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMTQiLCJmZiI6IjIwMjYtMDUtMTUiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMTkiLCJmZiI6IjIwMjYtMDUtMjIiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMjkiLCJmZiI6IjIwMjYtMDUtMjkiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMDEiLCJmZiI6IjIwMjYtMDYtMTAiLCJkaWFzIjo3LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMTgiLCJmZiI6IjIwMjYtMDYtMTkiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In1dLCJleHRyYVZhYzEiOjE2fSwiNiI6eyJlc3RhZG8iOiJyZXRpcmFkbyIsImZlY2hhUmV0aXJvIjoiMjAyNi0wNi0xNiJ9LCI3Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjExLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMjIiLCJmZiI6IjIwMjYtMDUtMjUiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMjIiLCJmZiI6IjIwMjYtMDctMDYiLCJkaWFzIjo5LCJ0aXBvIjoibGV5In1dfSwiOCI6eyJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAyLTI2IiwiZmYiOiIyMDI2LTAzLTA2IiwiZGlhcyI6NywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA3LTEwIiwiZmYiOiIyMDI2LTA3LTEwIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA3LTE0IiwiZmYiOiIyMDI2LTA3LTE0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MH0sIjkiOnsic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNy0yMyIsImZmIjoiMjAyNS0wNy0yOCIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0xMi0wNSIsImZmIjoiMjAyNS0xMi0wNSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNC0wNiIsImZmIjoiMjAyNS0wNC0yOSIsImRpYXMiOjE1LCJ0aXBvIjoibGV5In1dfSwiMTAiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNS0yNSIsImZmIjoiMjAyNi0wNS0yNSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMS0wNSIsImZmIjoiMjAyNi0wMS0wNyIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMy0zMCIsImZmIjoiMjAyNi0wNC0wMSIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0yOSIsImZmIjoiMjAyNi0xMC0wMiIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0xMS0wOSIsImZmIjoiMjAyNi0xMS0xMyIsImRpYXMiOjUsInRpcG8iOiJsZXkifV0sImV4dHJhVmFjMSI6MTB9LCIxMSI6eyJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAxLTE2IiwiZmYiOiIyMDI2LTAxLTIxIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTAyIiwiZmYiOiIyMDI2LTAzLTA0IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTMwIiwiZmYiOiIyMDI2LTAzLTMwIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA0LTAxIiwiZmYiOiIyMDI2LTA0LTAxIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA1LTA0IiwiZmYiOiIyMDI2LTA1LTA0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA1LTA4IiwiZmYiOiIyMDI2LTA1LTA4IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTA1LTMwIiwiZmYiOiIyMDI0LTA1LTMwIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTAyLTE3IiwiZmYiOiIyMDI1LTAyLTE3IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTAyLTI1IiwiZmYiOiIyMDI1LTAyLTI4IiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA3LTI1IiwiZmYiOiIyMDI1LTA3LTI5IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTE1IiwiZmYiOiIyMDI1LTA4LTE1IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA5LTE3IiwiZmYiOiIyMDI1LTA5LTE3IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTExLTA0IiwiZmYiOiIyMDI1LTExLTA0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTE4IiwiZmYiOiIyMDI1LTEyLTE5IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MH0sIjEyIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjEzIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNi0wMSIsImZmIjoiMjAyNi0wNi0wMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifV19LCIxNCI6eyJleHRyYVZhYzEiOjUsIl9tb2RpZmllZCI6dHJ1ZX0sIjE1Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMjUiLCJmZiI6IjIwMjYtMDktMjkiLCJkaWFzIjozLCJ0aXBvIjoibGV5In1dfSwiMTYiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6OSwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTE2IiwiZmYiOiIyMDI2LTA2LTE5IiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA4LTI0IiwiZmYiOiIyMDI2LTA4LTI4IiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9XX0sIjE3Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOiIyMDI2LTA4LTEwIiwiZXh0cmFWYWMxIjoxMCwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTA5IiwiZmYiOiIyMDI2LTA2LTIzIiwiZGlhcyI6MTAsInRpcG8iOiJsZXkifV19LCIxOCI6eyJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTEzIiwiZmYiOiIyMDI2LTAzLTEzIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA0LTAxIiwiZmYiOiIyMDI2LTA0LTAxIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA0LTE0IiwiZmYiOiIyMDI1LTA0LTE2IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTA0IiwiZmYiOiIyMDI1LTA4LTA2IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTA4IiwiZmYiOiIyMDI1LTA4LTA4IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTExLTE0IiwiZmYiOiIyMDI1LTExLTE0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTIyIiwiZmYiOiIyMDI1LTEyLTI0IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTE4IiwiZmYiOiIyMDI1LTEyLTE5IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEyLTE4IiwiZmYiOiIyMDI2LTEyLTIzIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA5LTIxIiwiZmYiOiIyMDI2LTA5LTI1IiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEwLTIzIiwiZmYiOiIyMDI2LTEwLTI1IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEwLTE5IiwiZmYiOiIyMDI2LTEwLTIyIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwiZXh0cmFWYWMxIjoxNH0sIjE5Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOiIyMDI2LTA1LTMxIn0sIjIwIjp7Il9tb2RpZmllZCI6dHJ1ZSwicGFpcyI6IlBBTiIsImV4dHJhVmFjMSI6M30sIjIxIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0xMSIsImZmIjoiMjAyNi0wOS0xMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifV19LCIyMiI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo0LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMDUiLCJmZiI6IjIwMjYtMTAtMDkiLCJkaWFzIjo1LCJ0aXBvIjoibGV5In1dfSwiMjMiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MjcsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOC0zMSIsImZmIjoiMjAyNi0wOS0yNSIsImRpYXMiOjIwLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDctMDMiLCJmZiI6IjIwMjYtMDctMTMiLCJkaWFzIjo3LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI0LCJmaSI6IjIwMjQtMTItMzEiLCJmZiI6IjIwMjQtMTItMzEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMTItMTUiLCJmZiI6IjIwMjUtMTItMTkiLCJkaWFzIjo1LCJ0aXBvIjoibGV5In1dLCJhZGRWVDI0IjotNH0sIjI0Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjUsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6bnVsbCwiZmYiOm51bGwsImRpYXMiOjUsInRpcG8iOiJsZWFsIn0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDMtMzAiLCJmZiI6IjIwMjYtMDMtMzEiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMDEiLCJmZiI6IjIwMjYtMDQtMDEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMjIiLCJmZiI6IjIwMjYtMDYtMjUiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDEtMDUiLCJmZiI6IjIwMjYtMDEtMDYiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In1dLCJleHRyYVZhYzEiOjd9LCIyNSI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo4LCJleHRyYVZhYzIiOjMsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMjIiLCJmZiI6IjIwMjI2LTA0LTIyIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTExLTA2IiwiZmYiOiIyMDI2LTExLTE3IiwiZGlhcyI6NywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOm51bGwsImZmIjpudWxsLCJkaWFzIjozLCJ0aXBvIjoibGVhbCJ9XX0sIjI2Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6NCwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTA5IiwiZmYiOiIyMDA2LTA2LTEyIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9XX0sIjI3Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjMsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNC0wNiIsImZmIjoiMjAyNi0wNC0wOCIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNS0xMyIsImZmIjoiMjAyNS0wNS0yMSIsImRpYXMiOjcsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0xMi0yMiIsImZmIjoiMjAyNS0xMi0zMSIsImRpYXMiOjcsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0xMS0wOCIsImZmIjoiMjAyNC0xMS0wOCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0xMS0yNyIsImZmIjoiMjAyNC0xMS0yOCIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0xMi0xMCIsImZmIjoiMjAyNC0xMi0xMyIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0xMi0xNiIsImZmIjoiMjAyNC0xMi0xOSIsImRpYXMiOjQsInRpcG8iOiJsZXkifV19LCIyOCI6eyJlc3RhZG8iOiJyZXRpcmFkbyIsImZlY2hhUmV0aXJvIjoiMjAyNi0wNC0zMCJ9LCIyOSI6eyJlc3RhZG8iOiJyZXRpcmFkbyIsImZlY2hhUmV0aXJvIjoiMjAyNi0wNy0xNyJ9LCIzMCI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTI0IiwiZmYiOiIyMDI2LTA0LTA4IiwiZGlhcyI6MTAsInRpcG8iOiJsZXkifV19LCIzMSI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAyLTA1IiwiZmYiOiIyMDI2LTAyLTA2IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAyLTI2IiwiZmYiOiIyMDI2LTAyLTI3IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA0LTA5IiwiZmYiOiIyMDI2LTA0LTEwIiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTAzIiwiZmYiOiIyMDI2LTA2LTA1IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA5LTA3IiwiZmYiOiIyMDI2LTA5LTA4IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9XSwiX21vZGlmaWVkIjp0cnVlfSwiMzIiOnsiZXh0cmFWYWMxIjo1LCJfbW9kaWZpZWQiOnRydWV9LCIzMyI6eyJfbW9kaWZpZWQiOnRydWUsImV4dHJhVmFjMiI6MCwiYWRkTGVhbCI6MCwiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6bnVsbCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0yNyIsImZmIjoiMjAyNi0wNy0zMSIsImRpYXMiOjUsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMS0xMiIsImZmIjoiMjAyNi0wMS0xNiIsImRpYXMiOjUsInRpcG8iOiJsZXkifV19LCIzNCI6e30sIjM1Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjUsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOC0wMyIsImZmIjoiMjAyNi0wOC0wNiIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNy0wOSIsImZmIjoiMjAyNS0wNy0xMSIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wOC0yNSIsImZmIjoiMjAyNS0wOC0yNiIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wOC0yOCIsImZmIjoiMjAyNS0wOC0yOCIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0wOS0wOSIsImZmIjoiMjAyNC0wOS0xMiIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0wOC0yOCIsImZmIjoiMjAyNC0wOC0zMCIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0wNCIsImZmIjoiMjAyNi0wOS0wNCIsImRpYXMiOjEsInRpcG8iOiJsZXkifV0sImFkZExlYWwiOjExfSwiMzYiOnsic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMi0yNyIsImZmIjoiMjAyNi0wMy0wMiIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wOC0wNSIsImZmIjoiMjAyNS0wOC0yNSIsImRpYXMiOjEzLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDEtMDIiLCJmZiI6IjIwMjYtMDEtMTAiLCJkaWFzIjo2LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMTEiLCJmZiI6IjIwMjYtMDktMjgiLCJkaWFzIjoxMiwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwiZXh0cmFWYWMxIjoxOH0sIjM3Ijp7Il9tb2RpZmllZCI6dHJ1ZSwicGFpcyI6IlBBTiJ9LCIzOCI6eyJfbW9kaWZpZWQiOnRydWV9LCIzOSI6eyJfbW9kaWZpZWQiOnRydWV9LCI0MCI6eyJfbW9kaWZpZWQiOnRydWV9LCI0MSI6eyJfbW9kaWZpZWQiOnRydWUsInBhaXMiOiJQQU4iLCJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoxLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMDUiLCJmZiI6IjIwMjYtMTAtMDUiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dfSwiNDIiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDMiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDQiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDUiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDYiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDciOnsiX21vZGlmaWVkIjp0cnVlfSwiNDgiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDkiOnsiZXh0cmFWYWMyIjowLCJhZGRMZWFsIjowLCJfbW9kaWZpZWQiOnRydWV9LCI1MCI6eyJleHRyYVZhYzIiOjAsImFkZExlYWwiOjAsIl9tb2RpZmllZCI6dHJ1ZSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MCwic29saWNpdHVkZXMiOltdfSwiNTEiOnsiX21vZGlmaWVkIjp0cnVlfX0sIm11dGF0aW9ucyI6W3siaWQiOjAsIkNhcmdvIjoiQVNTT0NJQVRFIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6Ikp1YW4gRGF2aWQgUm9kcsOtZ3VleiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMDctMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1Ijo1LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjIsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoxLCJDYXJnbyI6IkFJIFRFQ0ggU1BFQ0lBTElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0xMi0xNiIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjAuMjJ9LHsiaWQiOjIsIkNhcmdvIjoiU1IgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wNi0wMyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjEsIkRpYXNUb21hZG9zMiI6NC4xOCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjMsIkNhcmdvIjoiQUkgREVMSVZFUlkgU1IuIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNS0xMS0yNiIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjo0LCJDYXJnbyI6IlNFTklPUiBBTkFMWVNULCBCVVNJTkVTUyBBTkFMWVRJQ1MiLCJKZWZlRGlyZWN0byI6Ikp1YW4gRGF2aWQgUm9kcsOtZ3VleiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjMtMDUtMTUiLCJWVDIyIjowLCJWVDIzIjoyLCJWVDI0IjoxNSwiVlQyNSI6OSwiVlQyNiI6MjAsIkRpYXNUb21hZG9zMiI6Mi45LCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6NSwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNC0xMS0yNiIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjE0LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjo2LCJDYXJnbyI6IkRBVEEgUVVBTElUWSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAyLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NCwiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjowLjUxLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6NywiQ2FyZ28iOiJTUiBBTkFMWVNUIEJVU0lORVNTIEFOQUxZVElDUyIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNC0wNy0xNSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6NC43NSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjgsIkNhcmdvIjoiTkVUV09SSyBBTkQgUFJPRFVDVCBTRU5JT1IgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0xNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjgsIkRpYXNUb21hZG9zMiI6MS4xMSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjksIkNhcmdvIjoiREFUQSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA0LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NSwiVlQyNiI6MTUsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxMCwiQ2FyZ28iOiJTRU5JT1IgQlVTSU5FU1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgR2FtcGVsIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjEwLCJWVDI2Ijo2LCJEaWFzVG9tYWRvczIiOjAuODksIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoxMSwiQ2FyZ28iOiJTUiBNQU5BR0VSIERBVEEgU0NJRU5DRSIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA0LTA4IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MTEsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxMiwiQ2FyZ28iOiJJQSBTUEVDSUFMSVNUIChMSUJFUlRZKSIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0xMC0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6My44MiwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjEzLCJDYXJnbyI6Ik1BTkFHRVIiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEdhbXBlbCIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNC0wNS0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjE4LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6MTQsIkNhcmdvIjoiREFUQSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0xNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjYsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6Mi4xMSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjE1LCJDYXJnbyI6IkNVU1RPTUVSIERBVEEgREVNQU5EIE9QUyIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFJ1w616IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI1LTAxLTE1IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjE2LCJDYXJnbyI6IlBNTyIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgR2FtcGVsIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTAxLTE1IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjE3LCJDYXJnbyI6IkRBVEEgU0NJRU5USVNUIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTA3LTA4IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MTQsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjE4LCJDYXJnbyI6IkRBVEEgREVMSVZFUlkgJiBRVUFMSVRZIFNSIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjQtMDUtMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1Ijo3LCJWVDI2IjoyLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoxOSwiQ2FyZ28iOiJTUiBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJNYXVyaWNpbyBSb21lcm8iLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTEyLTAyIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NywiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjAsIkNhcmdvIjoiREVWT1BTIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTExLTE3IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MC42Mn0seyJpZCI6MjEsIkNhcmdvIjoiTkVUV09SSyBBTkQgUFJPRFVDVCBBTkFMWVRJQ1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wMy0yNCIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjIyLCJDYXJnbyI6IlNSIEJVU0lORVNTIElOVEVMTElHRU5DRSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTAyLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MywiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjMsIkNhcmdvIjoiQlVTSU5FU1MgQU5BTFlUSUNTIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6Ikp1YW4gRGF2aWQgUm9kcsOtZ3VleiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjMtMDItMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0Ijo1LCJWVDI1Ijo1LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoyNCwiQ2FyZ28iOiJTUiBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJKdWFuIERhdmlkIFJvZHLDrWd1ZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTExLTA0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MTAsIlZUMjYiOjIsIkRpYXNUb21hZG9zMiI6MS4yOSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjI1LCJDYXJnbyI6IkFJIERFTElWRVJZIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDItMTYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjoyNiwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0xMi0wOSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6NC43NywiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjI3LCJDYXJnbyI6IkJVU0lORVNTIEFOQUxZVElDUyBBU1NPQ0lBVEUgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyMy0wMS0yMyIsIlZUMjIiOjAsIlZUMjMiOjYsIlZUMjQiOjExLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoyOCwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCBNQU5BR0VSIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDIyLTAyLTIxIiwiVlQyMiI6MCwiVlQyMyI6MTYsIlZUMjQiOjEwLCJWVDI1IjoxMCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6MjksIkNhcmdvIjoiQUkgU1RSQVRFR1kgJiBERUxJVkVSWSBMRUFEIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDItMTciLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6MzAsIkNhcmdvIjoiQ0JNIEJVU0lORVNTIEFOQUxZU1QgT1BTIiwiSmVmZURpcmVjdG8iOiJKZWFuZXR0ZSBHYW1wZWwiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjQtMDEtMTAiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0Ijo2LCJWVDI1IjowLCJWVDI2IjoxMCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjMxLCJDYXJnbyI6IlNFTklPUiBNQU5BR0VSIiwiSmVmZURpcmVjdG8iOiJKZWFuZXR0ZSBHYW1wZWwiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjQtMTItMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxMiwiVlQyNiI6NiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjMyLCJDYXJnbyI6IlNJVEUgUkVMSUFCSUxJVFkgRU5HSU5FRVIiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMDUtMjYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1Ijo1LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjIuMDcsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjozMywiQ2FyZ28iOiJKUiBEQVRBIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAzLTI0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MSwiVlQyNiI6NSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6My44OH0seyJpZCI6MzQsIkNhcmdvIjoiSUEgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI1LTAxLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6NSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM1LCJDYXJnbyI6IkJVU0lORVNTIFNQRUNJQUxJU1QiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEdhbXBlbCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjMtMDMtMDEiLCJWVDIyIjowLCJWVDIzIjo4LCJWVDI0IjowLCJWVDI1Ijo2LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjozNiwiQ2FyZ28iOiJEQVRBIEVOR0lORUVSIE9QUyIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA3LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM3LCJDYXJnbyI6IklOR0VOSUVSTyBERSBEQVRPUyBKVU5JT1IiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDQtMTMiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjozOCwiQ2FyZ28iOiJBSSBERU1BTkQgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNi0wNSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM5LCJDYXJnbyI6IkNCTSBTRU5JT1IgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgR2FtcGVsIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNi0xNiIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQwLCJDYXJnbyI6IkRBVEEgUVVBTElUWSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA2LTMwIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDEsIkNhcmdvIjoiREFUQSBTQ0lFTlRJU1QiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEdhbXBlbCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDYtMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjo0MiwiQ2FyZ28iOiJTUiBQTEFURk9STSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTA2LTEwIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQzLCJDYXJnbyI6IlNFTklPUiBBTkFMWVNUIEJBIiwiSmVmZURpcmVjdG8iOiJKdWFuIERhdmlkIFJvZHLDrWd1ZXoiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDctMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDQsIkNhcmdvIjoiQUkgREVWRUxPUEVSIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA3LTE0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDUsIkNhcmdvIjoiQUkgU1BFQ0lBTElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNy0yMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ2LCJDYXJnbyI6IkFJIERFVkVMT1BFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNy0yNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ3LCJDYXJnbyI6Ik1BTkFHRVLCoCBCQSIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTA3LTIxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ4LCJDYXJnbyI6IkRTIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNi0wNy0yMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfV0sIm5ld0VtcGxveWVlcyI6W3siaWQiOjQ5LCJQYWlzIjoiQ09MIiwiRW1wbGVhZG8iOiJKQUlNRSBUT0xFIENMQVZJSk8iLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkplZmVEaXJlY3RvIjoiTWF1cmljaW8gUm9tZXJvIiwiQ2FyZ28iOiJBSSBUUkFOU0ZPUk1BVElPTiBDT05TVUxUQU5UIiwiSW5pY2lvIjoiMjAyNi0wNy0yNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjo1MCwiUGFpcyI6IkNPTCIsIkVtcGxlYWRvIjoiTEFVUkEgUk9NRVJPIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJKZWZlRGlyZWN0byI6Ikp1YW4gRGF2aWQgUm9kcsOtZ3VleiIsIkNhcmdvIjoiU0VOSU9SIE1BTkFHRVIgQUkgQU5EIENBUkUgQVVUT01BVElPTiIsIkluaWNpbyI6IjIwMjYtMDgtMDMiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NTEsIlBhaXMiOiJDT0wiLCJFbXBsZWFkbyI6IkpVQU4gU0VCQVNUSUFOIFZBTEVOQ0lBIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJDYXJnbyI6IlNFTUkgU1IgREFUQSBTQ0lFTlRJU1QiLCJJbmljaW8iOiIyMDI2LTA4LTAzIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDksIlBhaXMiOiJDT0wiLCJFbXBsZWFkbyI6IkFMRUpBTkRSTyDDgU5HRUwgRFVRVUUiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIkNhcmdvIjoiQUkgUHJvZHVjdGl2aXR5IE1hbmFnZXIiLCJJbmljaW8iOiIyMDI2LTA4LTA1IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlfSx7ImlkIjo1MCwiRW1wbGVhZG8iOiJEQU5JRUwgQUxGT05TTyBTSUxWQSBCQVJSRVJBIiwiUGFpcyI6IkNPTCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkNhcmdvIjoiIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJJbmljaW8iOiIyMDI2LTA5LTA3IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjUxLCJFbXBsZWFkbyI6IlNBTVVFTCDDgU5HRUwgUMOJUkVaIiwiUGFpcyI6IkNPTCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkNhcmdvIjoiIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJJbmljaW8iOiIyMDI2LTA5LTExIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjUyLCJFbXBsZWFkbyI6IkdMT1JJQSBOQVlBUkEgTUVMTyBST0RSw41HVUVaIiwiUGFpcyI6IkNPTCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkNhcmdvIjoiIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJJbmljaW8iOiIyMDI2LTA5LTExIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjUzLCJFbXBsZWFkbyI6IkpVQU4gRkVMSVBFIEFHVURFTE8gUsONT1MiLCJQYWlzIjoiQ09MIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiQ2FyZ28iOiIiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIkluaWNpbyI6IjIwMjYtMDktMTEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NTQsIkVtcGxlYWRvIjoiWUFERVIgSVbDgU4gTU9SRU5PIFJPRFLDjUdVRVoiLCJQYWlzIjoiQ09MIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiQ2FyZ28iOiIiLCJKZWZlRGlyZWN0byI6Ik1hdXJpY2lvIFJvbWVybyIsIkluaWNpbyI6IjIwMjYtMDktMTEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH1dLCJuZXh0SWQiOjU1fQ=='))));
+  var d=JSON.parse(decodeURIComponent(escape(atob('eyJvdmVycmlkZXMiOnsiMCI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoyLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6bnVsbCwiZmYiOm51bGwsImRpYXMiOjEsInRpcG8iOiJsZWFsIn0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDgtMTAiLCJmZiI6IjIwMjYtMDgtMTAiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMjEiLCJmZiI6IjIwMjYtMDktMjEiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dLCJhZGRWVDI2IjowLCJhZGRMZWFsIjowLCJfbW9kaWZpZWQiOnRydWV9LCIxIjp7Il9tb2RpZmllZCI6dHJ1ZSwicGFpcyI6IlBBTiIsImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEzLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMjgiLCJmZiI6IjIwMjYtMTEtMTkiLCJkaWFzIjoxMywidGlwbyI6ImxleSJ9XX0sIjIiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MTQsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0xNyIsImZmIjoiMjAyNi0wOC0wNyIsImRpYXMiOjE0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMDkiLCJmZiI6IjIwMjYtMTAtMDkiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dfSwiMyI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo5LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMTYiLCJmZiI6IjIwMjYtMDYtMTYiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMTEiLCJmZiI6IjIwMjYtMDktMTQiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMDQiLCJmZiI6IjIwMjYtMDktMDgiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMzAiLCJmZiI6IjIwMjYtMTEtMDQiLCJkaWFzIjozLCJ0aXBvIjoibGV5In1dfSwiNCI6e30sIjUiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wMS0yMCIsImZmIjoiMjAyNS0wMS0yMiIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNy0yOSIsImZmIjoiMjAyNS0wOC0xMyIsImRpYXMiOjExLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMTQiLCJmZiI6IjIwMjYtMDUtMTUiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMTkiLCJmZiI6IjIwMjYtMDUtMjIiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMjkiLCJmZiI6IjIwMjYtMDUtMjkiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMDEiLCJmZiI6IjIwMjYtMDYtMTAiLCJkaWFzIjo3LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMTgiLCJmZiI6IjIwMjYtMDYtMTkiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In1dLCJleHRyYVZhYzEiOjE2fSwiNiI6eyJlc3RhZG8iOiJyZXRpcmFkbyIsImZlY2hhUmV0aXJvIjoiMjAyNi0wNi0xNiJ9LCI3Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEyLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDUtMjIiLCJmZiI6IjIwMjYtMDUtMjUiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMjIiLCJmZiI6IjIwMjYtMDctMDYiLCJkaWFzIjo5LCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTAtMTYiLCJmZiI6IjIwMjYtMTAtMTYiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In1dfSwiOCI6eyJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAyLTI2IiwiZmYiOiIyMDI2LTAzLTA2IiwiZGlhcyI6NywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA3LTEwIiwiZmYiOiIyMDI2LTA3LTEwIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA3LTE0IiwiZmYiOiIyMDI2LTA3LTE0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MH0sIjkiOnsic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNy0yMyIsImZmIjoiMjAyNS0wNy0yOCIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0xMi0wNSIsImZmIjoiMjAyNS0xMi0wNSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0wNC0wNiIsImZmIjoiMjAyNS0wNC0yOSIsImRpYXMiOjE1LCJ0aXBvIjoibGV5In1dfSwiMTAiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNS0yNSIsImZmIjoiMjAyNi0wNS0yNSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMS0wNSIsImZmIjoiMjAyNi0wMS0wNyIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMy0zMCIsImZmIjoiMjAyNi0wNC0wMSIsImRpYXMiOjMsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0yOSIsImZmIjoiMjAyNi0xMC0wMiIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0xMS0wOSIsImZmIjoiMjAyNi0xMS0xMyIsImRpYXMiOjUsInRpcG8iOiJsZXkifV0sImV4dHJhVmFjMSI6MTB9LCIxMSI6eyJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAxLTE2IiwiZmYiOiIyMDI2LTAxLTIxIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTAyIiwiZmYiOiIyMDI2LTAzLTA0IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTMwIiwiZmYiOiIyMDI2LTAzLTMwIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA0LTAxIiwiZmYiOiIyMDI2LTA0LTAxIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA1LTA0IiwiZmYiOiIyMDI2LTA1LTA0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA1LTA4IiwiZmYiOiIyMDI2LTA1LTA4IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTA1LTMwIiwiZmYiOiIyMDI0LTA1LTMwIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTAyLTE3IiwiZmYiOiIyMDI1LTAyLTE3IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTAyLTI1IiwiZmYiOiIyMDI1LTAyLTI4IiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA3LTI1IiwiZmYiOiIyMDI1LTA3LTI5IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTE1IiwiZmYiOiIyMDI1LTA4LTE1IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA5LTE3IiwiZmYiOiIyMDI1LTA5LTE3IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTExLTA0IiwiZmYiOiIyMDI1LTExLTA0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTE4IiwiZmYiOiIyMDI1LTEyLTE5IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTExLTA5IiwiZmYiOiIyMDI2LTExLTEzIiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MH0sIjEyIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjEzIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNi0wMSIsImZmIjoiMjAyNi0wNi0wMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifV19LCIxNCI6eyJleHRyYVZhYzEiOjUsIl9tb2RpZmllZCI6dHJ1ZX0sIjE1Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMjUiLCJmZiI6IjIwMjYtMDktMjkiLCJkaWFzIjozLCJ0aXBvIjoibGV5In1dfSwiMTYiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6OSwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTE2IiwiZmYiOiIyMDI2LTA2LTE5IiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA4LTI0IiwiZmYiOiIyMDI2LTA4LTI4IiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9XX0sIjE3Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOiIyMDI2LTA4LTEwIiwiZXh0cmFWYWMxIjoxMCwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA2LTA5IiwiZmYiOiIyMDI2LTA2LTIzIiwiZGlhcyI6MTAsInRpcG8iOiJsZXkifV19LCIxOCI6eyJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAzLTEzIiwiZmYiOiIyMDI2LTAzLTEzIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA0LTAxIiwiZmYiOiIyMDI2LTA0LTAxIiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA0LTE0IiwiZmYiOiIyMDI1LTA0LTE2IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTA0IiwiZmYiOiIyMDI1LTA4LTA2IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTA4IiwiZmYiOiIyMDI1LTA4LTA4IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTExLTE0IiwiZmYiOiIyMDI1LTExLTE0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTIyIiwiZmYiOiIyMDI1LTEyLTI0IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTE4IiwiZmYiOiIyMDI1LTEyLTE5IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEyLTE4IiwiZmYiOiIyMDI2LTEyLTIzIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA5LTIxIiwiZmYiOiIyMDI2LTA5LTI1IiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEwLTIzIiwiZmYiOiIyMDI2LTEwLTI1IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEwLTE5IiwiZmYiOiIyMDI2LTEwLTIyIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9XSwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwiZXh0cmFWYWMxIjoxNH0sIjE5Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOiIyMDI2LTA1LTMxIn0sIjIwIjp7Il9tb2RpZmllZCI6dHJ1ZSwicGFpcyI6IlBBTiIsImV4dHJhVmFjMSI6M30sIjIxIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjEsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wOS0xMSIsImZmIjoiMjAyNi0wOS0xMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifV19LCIyMiI6eyJlc3RhZG8iOiJyZXRpcmFkbyIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjQsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0xMC0wNSIsImZmIjoiMjAyNi0xMC0wOSIsImRpYXMiOjUsInRpcG8iOiJsZXkifV19LCIyMyI6eyJlc3RhZG8iOiJhY3Rpdm8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjoyNywiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA4LTMxIiwiZmYiOiIyMDI2LTA5LTI1IiwiZGlhcyI6MjAsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNy0wMyIsImZmIjoiMjAyNi0wNy0xMyIsImRpYXMiOjcsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjQsImZpIjoiMjAyNC0xMi0zMSIsImZmIjoiMjAyNC0xMi0zMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjUsImZpIjoiMjAyNS0xMi0xNSIsImZmIjoiMjAyNS0xMi0xOSIsImRpYXMiOjUsInRpcG8iOiJsZXkifV0sImFkZFZUMjQiOi00fSwiMjQiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMy0zMCIsImZmIjoiMjAyNi0wMy0zMSIsImRpYXMiOjIsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNC0wMSIsImZmIjoiMjAyNi0wNC0wMSIsImRpYXMiOjEsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNi0yMiIsImZmIjoiMjAyNi0wNi0yNSIsImRpYXMiOjQsInRpcG8iOiJsZXkifSx7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wMS0wNSIsImZmIjoiMjAyNi0wMS0wNiIsImRpYXMiOjIsInRpcG8iOiJsZXkifV0sImV4dHJhVmFjMSI6NywiYWRkTGVhbCI6Mn0sIjI1Ijp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzEiOjgsImV4dHJhVmFjMiI6MCwic29saWNpdHVkZXMiOlt7ImFuaW8iOjIwMjYsImZpIjoiMjAyNi0wNC0yMiIsImZmIjoiMjAyMjYtMDQtMjIiLCJkaWFzIjoxLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMTEtMDYiLCJmZiI6IjIwMjYtMTEtMTciLCJkaWFzIjo3LCJ0aXBvIjoibGV5In1dLCJhZGRMZWFsIjowfSwiMjYiOnsiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjo0LCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMDkiLCJmZiI6IjIwMDYtMDYtMTIiLCJkaWFzIjo0LCJ0aXBvIjoibGV5In1dfSwiMjciOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MywiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA0LTA2IiwiZmYiOiIyMDI2LTA0LTA4IiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA1LTEzIiwiZmYiOiIyMDI1LTA1LTIxIiwiZGlhcyI6NywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTEyLTIyIiwiZmYiOiIyMDI1LTEyLTMxIiwiZGlhcyI6NywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTExLTA4IiwiZmYiOiIyMDI0LTExLTA4IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTExLTI3IiwiZmYiOiIyMDI0LTExLTI4IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTEyLTEwIiwiZmYiOiIyMDI0LTEyLTEzIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTEyLTE2IiwiZmYiOiIyMDI0LTEyLTE5IiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9XX0sIjI4Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOiIyMDI2LTA0LTMwIn0sIjI5Ijp7ImVzdGFkbyI6InJldGlyYWRvIiwiZmVjaGFSZXRpcm8iOiIyMDI2LTA3LTE3In0sIjMwIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDMtMjQiLCJmZiI6IjIwMjYtMDQtMDgiLCJkaWFzIjoxMCwidGlwbyI6ImxleSJ9XX0sIjMxIjp7ImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjAsInNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDItMDUiLCJmZiI6IjIwMjYtMDItMDYiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDItMjYiLCJmZiI6IjIwMjYtMDItMjciLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDQtMDkiLCJmZiI6IjIwMjYtMDQtMTAiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDYtMDMiLCJmZiI6IjIwMjYtMDYtMDUiLCJkaWFzIjozLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDktMDciLCJmZiI6IjIwMjYtMDktMDgiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In1dLCJfbW9kaWZpZWQiOnRydWV9LCIzMiI6eyJleHRyYVZhYzEiOjUsIl9tb2RpZmllZCI6dHJ1ZX0sIjMzIjp7Il9tb2RpZmllZCI6dHJ1ZSwiZXh0cmFWYWMyIjowLCJhZGRMZWFsIjowLCJlc3RhZG8iOiJyZXRpcmFkbyIsImZlY2hhUmV0aXJvIjpudWxsLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA3LTI3IiwiZmYiOiIyMDI2LTA3LTMxIiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAxLTEyIiwiZmYiOiIyMDI2LTAxLTE2IiwiZGlhcyI6NSwidGlwbyI6ImxleSJ9XX0sIjM0Ijp7fSwiMzUiOnsiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6NSwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA4LTAzIiwiZmYiOiIyMDI2LTA4LTA2IiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA3LTA5IiwiZmYiOiIyMDI1LTA3LTExIiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTI1IiwiZmYiOiIyMDI1LTA4LTI2IiwiZGlhcyI6MiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNSwiZmkiOiIyMDI1LTA4LTI4IiwiZmYiOiIyMDI1LTA4LTI4IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTA5LTA5IiwiZmYiOiIyMDI0LTA5LTEyIiwiZGlhcyI6NCwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNCwiZmkiOiIyMDI0LTA4LTI4IiwiZmYiOiIyMDI0LTA4LTMwIiwiZGlhcyI6MywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA5LTA0IiwiZmYiOiIyMDI2LTA5LTA0IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9XSwiYWRkTGVhbCI6NX0sIjM2Ijp7InNvbGljaXR1ZGVzIjpbeyJhbmlvIjoyMDI2LCJmaSI6IjIwMjYtMDItMjciLCJmZiI6IjIwMjYtMDMtMDIiLCJkaWFzIjoyLCJ0aXBvIjoibGV5In0seyJhbmlvIjoyMDI1LCJmaSI6IjIwMjUtMDgtMDUiLCJmZiI6IjIwMjUtMDgtMjUiLCJkaWFzIjoxMywidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTAxLTAyIiwiZmYiOiIyMDI2LTAxLTEwIiwiZGlhcyI6NiwidGlwbyI6ImxleSJ9LHsiYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTA5LTExIiwiZmYiOiIyMDI2LTA5LTI4IiwiZGlhcyI6MTIsInRpcG8iOiJsZXkifV0sImVzdGFkbyI6ImFjdGl2byIsImZlY2hhUmV0aXJvIjpudWxsLCJleHRyYVZhYzIiOjAsImV4dHJhVmFjMSI6MTh9LCIzNyI6eyJfbW9kaWZpZWQiOnRydWUsInBhaXMiOiJQQU4ifSwiMzgiOnsiX21vZGlmaWVkIjp0cnVlfSwiMzkiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDAiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDEiOnsiX21vZGlmaWVkIjp0cnVlLCJwYWlzIjoiUEFOIiwiZXN0YWRvIjoiYWN0aXZvIiwiZmVjaGFSZXRpcm8iOm51bGwsImV4dHJhVmFjMSI6MSwiZXh0cmFWYWMyIjowLCJzb2xpY2l0dWRlcyI6W3siYW5pbyI6MjAyNiwiZmkiOiIyMDI2LTEwLTA1IiwiZmYiOiIyMDI2LTEwLTA1IiwiZGlhcyI6MSwidGlwbyI6ImxleSJ9XX0sIjQyIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQzIjp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ0Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ1Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ2Ijp7Il9tb2RpZmllZCI6dHJ1ZX0sIjQ3Ijp7Il9tb2RpZmllZCI6dHJ1ZSwiZXN0YWRvIjoicmV0aXJhZG8ifSwiNDgiOnsiX21vZGlmaWVkIjp0cnVlfSwiNDkiOnsiZXh0cmFWYWMyIjowLCJhZGRMZWFsIjowLCJfbW9kaWZpZWQiOnRydWV9LCI1MCI6eyJleHRyYVZhYzIiOjAsImFkZExlYWwiOjAsIl9tb2RpZmllZCI6dHJ1ZSwiZXN0YWRvIjoicmV0aXJhZG8iLCJmZWNoYVJldGlybyI6bnVsbCwiZXh0cmFWYWMxIjowLCJzb2xpY2l0dWRlcyI6W119LCI1MSI6eyJfbW9kaWZpZWQiOnRydWV9LCI1MyI6eyJfbW9kaWZpZWQiOnRydWV9LCI1NCI6eyJfbW9kaWZpZWQiOnRydWV9LCI1NSI6eyJfbW9kaWZpZWQiOnRydWV9LCI1NiI6eyJfbW9kaWZpZWQiOnRydWV9LCI1NyI6eyJfbW9kaWZpZWQiOnRydWV9LCI1OCI6eyJfbW9kaWZpZWQiOnRydWV9LCI1OSI6eyJfbW9kaWZpZWQiOnRydWV9fSwibXV0YXRpb25zIjpbeyJpZCI6MCwiQ2FyZ28iOiJBU1NPQ0lBVEUgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wNy0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjUsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjEsIkNhcmdvIjoiQUkgVEVDSCBTUEVDSUFMSVNUIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTEyLTE2IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MC4yMn0seyJpZCI6MiwiQ2FyZ28iOiJTUiBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJKdWFuIERhdmlkIFJvZHLDrWd1ZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTA2LTAzIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjoyLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MywiQ2FyZ28iOiJBSSBERUxJVkVSWSBTUi4gQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFJ1w616IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI1LTExLTI2IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQsIkNhcmdvIjoiU0VOSU9SIEFOQUxZU1QsIEJVU0lORVNTIEFOQUxZVElDUyIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyMy0wNS0xNSIsIlZUMjIiOjAsIlZUMjMiOjIsIlZUMjQiOjE1LCJWVDI1Ijo5LCJWVDI2IjoyMCwiRGlhc1RvbWFkb3MyIjozLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6NSwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNC0xMS0yNiIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjE0LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjo2LCJDYXJnbyI6IkRBVEEgUVVBTElUWSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAyLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NCwiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjowLjUxLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6NywiQ2FyZ28iOiJTUiBBTkFMWVNUIEJVU0lORVNTIEFOQUxZVElDUyIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNC0wNy0xNSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjgsIkNhcmdvIjoiTkVUV09SSyBBTkQgUFJPRFVDVCBTRU5JT1IgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0xNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjgsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjksIkNhcmdvIjoiREFUQSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA0LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NSwiVlQyNiI6MTUsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxMCwiQ2FyZ28iOiJTRU5JT1IgQlVTSU5FU1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgR2FtcGVsIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjEwLCJWVDI2Ijo2LCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoxMSwiQ2FyZ28iOiJTUiBNQU5BR0VSIERBVEEgU0NJRU5DRSIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA0LTA4IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MTEsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjoxMiwiQ2FyZ28iOiJJQSBTUEVDSUFMSVNUIChMSUJFUlRZKSIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0xMC0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjEzLCJDYXJnbyI6Ik1BTkFHRVIiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEdhbXBlbCIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNC0wNS0wMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjE4LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6MTQsIkNhcmdvIjoiREFUQSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0wMy0xNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjYsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MSwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjE1LCJDYXJnbyI6IkNVU1RPTUVSIERBVEEgREVNQU5EIE9QUyIsIkplZmVEaXJlY3RvIjoiQ2FybG9zIFJ1w616IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI1LTAxLTE1IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjE2LCJDYXJnbyI6IlBNTyIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgR2FtcGVsIiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTAxLTE1IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjE3LCJDYXJnbyI6IkRBVEEgU0NJRU5USVNUIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTA3LTA4IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MTQsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjE4LCJDYXJnbyI6IkRBVEEgREVMSVZFUlkgJiBRVUFMSVRZIFNSIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjQtMDUtMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1Ijo3LCJWVDI2IjoyLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoxOSwiQ2FyZ28iOiJTUiBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJNYXVyaWNpbyBSb21lcm8iLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTEyLTAyIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6NywiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjAsIkNhcmdvIjoiREVWT1BTIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTExLTE3IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MC42Mn0seyJpZCI6MjEsIkNhcmdvIjoiTkVUV09SSyBBTkQgUFJPRFVDVCBBTkFMWVRJQ1MgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wMy0yNCIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjIyLCJDYXJnbyI6IlNSIEJVU0lORVNTIElOVEVMTElHRU5DRSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTAyLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MywiVlQyNiI6MSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6NX0seyJpZCI6MjMsIkNhcmdvIjoiQlVTSU5FU1MgQU5BTFlUSUNTIEFOQUxZU1QiLCJKZWZlRGlyZWN0byI6Ikp1YW4gRGF2aWQgUm9kcsOtZ3VleiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjMtMDItMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0Ijo1LCJWVDI1Ijo1LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoyNCwiQ2FyZ28iOiJTUiBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJKdWFuIERhdmlkIFJvZHLDrWd1ZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI0LTExLTA0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MTAsIlZUMjYiOjIsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjI1LCJDYXJnbyI6IkFJIERFTElWRVJZIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDItMTYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjoyNiwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNS0xMi0wOSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6NC43NywiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjV9LHsiaWQiOjI3LCJDYXJnbyI6IkJVU0lORVNTIEFOQUxZVElDUyBBU1NPQ0lBVEUgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyMy0wMS0yMyIsIlZUMjIiOjAsIlZUMjMiOjYsIlZUMjQiOjExLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjoyOCwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCBNQU5BR0VSIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDIyLTAyLTIxIiwiVlQyMiI6MCwiVlQyMyI6MTYsIlZUMjQiOjEwLCJWVDI1IjoxMCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6MjksIkNhcmdvIjoiQUkgU1RSQVRFR1kgJiBERUxJVkVSWSBMRUFEIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDItMTciLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6MzAsIkNhcmdvIjoiQ0JNIEJVU0lORVNTIEFOQUxZU1QgT1BTIiwiSmVmZURpcmVjdG8iOiJKZWFuZXR0ZSBHYW1wZWwiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjQtMDEtMTAiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0Ijo2LCJWVDI1IjowLCJWVDI2IjoxMCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjMxLCJDYXJnbyI6IlNFTklPUiBNQU5BR0VSIiwiSmVmZURpcmVjdG8iOiJKZWFuZXR0ZSBHYW1wZWwiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjQtMTItMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjoxMiwiVlQyNiI6NiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjMyLCJDYXJnbyI6IlNJVEUgUkVMSUFCSUxJVFkgRU5HSU5FRVIiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjUtMDUtMjYiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1Ijo1LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjozMywiQ2FyZ28iOiJKUiBEQVRBIEVOR0lORUVSIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI1LTAzLTI0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MSwiVlQyNiI6NSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6My44OH0seyJpZCI6MzQsIkNhcmdvIjoiSUEgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI1LTAxLTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6NSwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM1LCJDYXJnbyI6IkJVU0lORVNTIFNQRUNJQUxJU1QiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEdhbXBlbCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjMtMDMtMDEiLCJWVDIyIjowLCJWVDIzIjo4LCJWVDI0IjowLCJWVDI1Ijo2LCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1Ijo1fSx7ImlkIjozNiwiQ2FyZ28iOiJEQVRBIEVOR0lORUVSIE9QUyIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI0LTA3LTAxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MiwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM3LCJDYXJnbyI6IklOR0VOSUVSTyBERSBEQVRPUyBKVU5JT1IiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDQtMTMiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjozOCwiQ2FyZ28iOiJBSSBERU1BTkQgTUFOQUdFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNi0wNSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjM5LCJDYXJnbyI6IkNCTSBTRU5JT1IgQU5BTFlTVCIsIkplZmVEaXJlY3RvIjoiSmVhbmV0dGUgR2FtcGVsIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNi0xNiIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQwLCJDYXJnbyI6IkRBVEEgUVVBTElUWSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA2LTMwIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDEsIkNhcmdvIjoiREFUQSBTQ0lFTlRJU1QiLCJKZWZlRGlyZWN0byI6IkplYW5ldHRlIEdhbXBlbCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkluaWNpbyI6IjIwMjYtMDYtMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOnRydWUsIkxlYWwyMDI1IjowfSx7ImlkIjo0MiwiQ2FyZ28iOiJTUiBQTEFURk9STSBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTA2LTEwIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQzLCJDYXJnbyI6IlNFTklPUiBBTkFMWVNUIEJBIiwiSmVmZURpcmVjdG8iOiJKdWFuIERhdmlkIFJvZHLDrWd1ZXoiLCJUaXBvQ29udHJhdG8iOiJDb250cmF0byIsIkluaWNpbyI6IjIwMjYtMDctMDEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDQsIkNhcmdvIjoiQUkgREVWRUxPUEVSIiwiSmVmZURpcmVjdG8iOiJJdsOhbiBHw7NtZXoiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJJbmljaW8iOiIyMDI2LTA3LTE0IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjp0cnVlLCJMZWFsMjAyNSI6MH0seyJpZCI6NDUsIkNhcmdvIjoiQUkgU1BFQ0lBTElTVCIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNy0yMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ2LCJDYXJnbyI6IkFJIERFVkVMT1BFUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiSW5pY2lvIjoiMjAyNi0wNy0yNyIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6dHJ1ZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ3LCJDYXJnbyI6Ik1BTkFHRVLCoCBCQSIsIkplZmVEaXJlY3RvIjoiSnVhbiBEYXZpZCBSb2Ryw61ndWV6IiwiVGlwb0NvbnRyYXRvIjoiQ29udHJhdG8iLCJJbmljaW8iOiIyMDI2LTA3LTIxIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjQ4LCJDYXJnbyI6IkRTIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIlRpcG9Db250cmF0byI6IkNvbnRyYXRvIiwiSW5pY2lvIjoiMjAyNi0wNy0yMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfV0sIm5ld0VtcGxveWVlcyI6W3siaWQiOjUzLCJFbXBsZWFkbyI6IkpVQU4gRkVMSVBFIEFHVURFTE8gUsONT1MiLCJQYWlzIjoiQ09MIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiQ2FyZ28iOiJEQVRBIFNDSUVOVElTVCBTRU1JIFNFTklPUiIsIkplZmVEaXJlY3RvIjoiSXbDoW4gR8OzbWV6IiwiSW5pY2lvIjoiMjAyNi0wOS0xMSIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjo1NCwiRW1wbGVhZG8iOiJZQURFUiBJVsOBTiBNT1JFTk8gUk9EUsONR1VFWiIsIlBhaXMiOiJDT0wiLCJUaXBvQ29udHJhdG8iOiJOw7NtaW5hIExlYWwiLCJDYXJnbyI6IkRBVEEgU1IgRU5HSU5FRVIiLCJKZWZlRGlyZWN0byI6Ik1hdXJpY2lvIFJvbWVybyIsIkluaWNpbyI6IjIwMjYtMDktMTEiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NTUsIkVtcGxlYWRvIjoiSVZBTiBMQVZFUkRFIiwiUGFpcyI6IkNPTCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkNhcmdvIjoiREFUQSBTUiBFTkdJTkVFUiIsIkplZmVEaXJlY3RvIjoiTWF1cmljaW8gUm9tZXJvIiwiSW5pY2lvIjoiMjAyNi0wOS0zMCIsIlZUMjIiOjAsIlZUMjMiOjAsIlZUMjQiOjAsIlZUMjUiOjAsIlZUMjYiOjAsIkRpYXNUb21hZG9zMiI6MCwiQXBsaWNhTGVhbCI6ZmFsc2UsIkxlYWwyMDI1IjowfSx7ImlkIjo1NiwiRW1wbGVhZG8iOiJBTEVKQU5EUk8gw4FOR0VMIERVUVVFIiwiUGFpcyI6IkNPTCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkNhcmdvIjoiQUkgUFJPRFVDVElWSVRZIE1BTkFHRVIiLCJKZWZlRGlyZWN0byI6IkNhcmxvcyBSdcOteiIsIkluaWNpbyI6IjIwMjYtMDktMzAiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NTcsIkVtcGxlYWRvIjoiU0FNVUVMIMOBTkdFTCBQw4lSRVoiLCJQYWlzIjoiQ09MIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiQ2FyZ28iOiJBSSBERVZFTE9QRVIiLCJKZWZlRGlyZWN0byI6Ikl2w6FuIEfDs21leiIsIkluaWNpbyI6IjIwMjYtMDktMzAiLCJWVDIyIjowLCJWVDIzIjowLCJWVDI0IjowLCJWVDI1IjowLCJWVDI2IjowLCJEaWFzVG9tYWRvczIiOjAsIkFwbGljYUxlYWwiOmZhbHNlLCJMZWFsMjAyNSI6MH0seyJpZCI6NTgsIkVtcGxlYWRvIjoiR0xPUklBIE5BWUFSQSBNRUxPIFJPRFLDjUdVRVoiLCJQYWlzIjoiQ09MIiwiVGlwb0NvbnRyYXRvIjoiTsOzbWluYSBMZWFsIiwiQ2FyZ28iOiJBSSBERUxJVkVSWSBNQU5BR0VSIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJJbmljaW8iOiIyMDI2LTA5LTMwIiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9LHsiaWQiOjU5LCJFbXBsZWFkbyI6IkFORFLDiVMgRkVMSVBFIEdPTlpBTEVaIiwiUGFpcyI6IkNPTCIsIlRpcG9Db250cmF0byI6Ik7Ds21pbmEgTGVhbCIsIkNhcmdvIjoiREFUQSBERUxJVkVSWSBBTkQgUVVBTElUWSBBTkFMWVNUIiwiSmVmZURpcmVjdG8iOiJDYXJsb3MgUnXDrXoiLCJJbmljaW8iOiIyMDI2LTEwLTE5IiwiVlQyMiI6MCwiVlQyMyI6MCwiVlQyNCI6MCwiVlQyNSI6MCwiVlQyNiI6MCwiRGlhc1RvbWFkb3MyIjowLCJBcGxpY2FMZWFsIjpmYWxzZSwiTGVhbDIwMjUiOjB9XSwibmV4dElkIjo2MH0='))));
   var ov=d.overrides; for(var k in ov){overrides[k]=ov[k];}
   d.mutations.forEach(function(m){
     if(BASE_DATA[m.id]){var _m=BASE_DATA[m.id];
@@ -3901,14 +4366,20 @@ function resetSalarios(){
       _m.VT25=m.VT25||0;_m.VT26=m.VT26||0;_m.DiasTomados2=m.DiasTomados2||0;
       _m.AplicaLeal=!!m.AplicaLeal;_m.Leal2025=m.Leal2025||0;}
   });
-  BASE_DATA.splice(49);
-  d.newEmployees.forEach(function(e){BASE_DATA.push(e);});
+  BASE_DATA.splice(BASE_DATA_LEN);
+  var _hids=new Set(BASE_DATA.map(function(e){return e.id;}));
+  d.newEmployees.forEach(function(e){if(!_hids.has(e.id))BASE_DATA.push(e);});
   nextId=d.nextId;
   guardarEnStorage=function(){return true;};
   cargarDesdeStorage=function(){return false;};
   marcarCambio=function(){};
 })();
 // ═══ FIN DATOS HORNEADOS ═══
+// ── Variables de estado del portal (deben declararse ANTES del IIFE init()) ──
+let _portalOTP = null;        // {code, email, empId, expires}
+let _otpTimerInterval = null;
+let _currentEmpId = null;
+
 (function init(){
   ['panel-vac','panel-nuevo','panel-mod','panel-hist','panel-cons'].forEach(id=>{
     const el=document.getElementById(id);if(el) el.style.display='none';
@@ -3968,6 +4439,77 @@ function resetSalarios(){
     const ov=overrides[k]; if(!ov||!ov.pais) return;
     const base=BASE_DATA[parseInt(k)]; if(base) base.Pais=ov.pais;
   });
+  // ── Corrección DiasTomados2 post-mutaciones (alineado Leal 01-Oct-2026) ─────
+  // Las mutaciones de localStorage sobreescriben BASE_DATA; forzamos los valores
+  // correctos DESPUÉS de aplicarlas. DiasTomados2 = días leales tomados históricos.
+  const _dt2Fix = {0:1, 2:2, 4:3, 7:0, 8:0, 10:0, 12:0, 14:1, 24:0, 25:0, 32:0, 35:0};
+  Object.keys(_dt2Fix).forEach(function(k){
+    var idx = parseInt(k);
+    for(var i=BASE_DATA.length-1;i>=0;i--){
+      if(BASE_DATA[i].id===idx){ BASE_DATA[i].DiasTomados2=_dt2Fix[k]; break; }
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── Corrección días leales: alineados con Leal al 01-Oct-2026 ───────────────
+  // Estos valores venían de migración con decimales; se alinean a fuente Leal.
+  // id:24 Julian (target=2): extraVac2=5+leal_sol=5 → limpiar y fijar a 2 via addLeal
+  // id:25 Juliana Hurtado (target=0): extraVac2=3 → limpiar
+  // id:35 Santiago Monsalve (target=5): addLeal=11 → corregir a 5
+  const _lealCorrections = {24:{extraVac2:0,addLeal:2}, 25:{extraVac2:0,addLeal:0}, 35:{addLeal:5}};
+  Object.keys(_lealCorrections).forEach(function(k){
+    if(!overrides[k]) overrides[k]={};
+    Object.assign(overrides[k], _lealCorrections[k]);
+    // Limpiar solicitudes tipo leal que quedan en el override (evitar doble conteo)
+    if(overrides[k].solicitudes){
+      overrides[k].solicitudes = overrides[k].solicitudes.filter(function(s){ return s.tipo !== 'leal'; });
+    }
+  });
+  // ────────────────────────────────────────────────────────────────────────────
+  // ── Restaurar vacaciones Jamis Garzón (id:16) si se perdieron del localStorage ──
+  // 4d Jun 16-19-2026  +  5d Ago 24-28-2026  (total 9d ley 2026)
+  // Solo aplica si solicitudes está vacío Y extraVac1 está limpio (datos realmente perdidos).
+  // Una vez que el admin modifique manualmente (extraVac1>0 o solicitudes no vacío), no sobreescribe.
+  (function(){
+    const _ov16 = overrides['16'] || (overrides['16']={});
+    const _sols16 = (_ov16.solicitudes||[]).filter(function(s){return s.tipo==='ley'&&s.anio===2026;});
+    if(_sols16.length===0 && !(_ov16.extraVac1>0)){
+      _ov16.solicitudes = (_ov16.solicitudes||[]).filter(function(s){return s.tipo!=='ley'||s.anio!==2026;});
+      _ov16.solicitudes.push(
+        {anio:2026,fi:'2026-06-16',ff:'2026-06-19',dias:4,tipo:'ley'},
+        {anio:2026,fi:'2026-08-24',ff:'2026-08-28',dias:5,tipo:'ley'}
+      );
+      _ov16.extraVac1 = 9;
+      if(!_ov16.estado) _ov16.estado='activo';
+      migraciones++;
+    }
+  })();
+  // ── Restaurar vacaciones Santiago Monsalve (id:35) si se perdieron ──
+  // 2024: 3d Ago 28-30 + 4d Sep 9-12  |  2026: 4d Ago 3-6 + 1d Sep 4
+  (function(){
+    const _ov35 = overrides['35'] || (overrides['35']={});
+    const _sols35 = _ov35.solicitudes||[];
+    const _has2024 = _sols35.some(function(s){return s.tipo==='ley'&&s.anio===2024;});
+    const _has2026 = _sols35.some(function(s){return s.tipo==='ley'&&s.anio===2026;});
+    if(!_has2024){
+      _ov35.solicitudes = _sols35.filter(function(s){return !(s.tipo==='ley'&&s.anio===2024);});
+      _ov35.solicitudes.push(
+        {anio:2024,fi:'2024-08-28',ff:'2024-08-30',dias:3,tipo:'ley'},
+        {anio:2024,fi:'2024-09-09',ff:'2024-09-12',dias:4,tipo:'ley'}
+      );
+      migraciones++;
+    }
+    if(!_has2026){
+      _ov35.solicitudes = (_ov35.solicitudes||[]).filter(function(s){return !(s.tipo==='ley'&&s.anio===2026);});
+      _ov35.solicitudes.push(
+        {anio:2026,fi:'2026-08-03',ff:'2026-08-06',dias:4,tipo:'ley'},
+        {anio:2026,fi:'2026-09-04',ff:'2026-09-04',dias:1,tipo:'ley'}
+      );
+      _ov35.extraVac1 = 5;
+      migraciones++;
+    }
+    if(!_ov35.estado) _ov35.estado='activo';
+  })();
+  // ────────────────────────────────────────────────────────────────────────────
   recalcularTodo();
   // Parche: eliminar JefeDirecto de overrides — BASE_DATA es la fuente canónica
   Object.keys(overrides).forEach(function(k){
@@ -3980,11 +4522,465 @@ function resetSalarios(){
   initConsEmpSelect();
   renderAlertas();
   setInterval(()=>{updateTopbar();updateTicker();},60000);
+  initPortal();
   setInterval(()=>{
     const now=new Date();
     document.getElementById('hdr-date').textContent=now.toLocaleDateString('es-CO',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' '+now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
   },30000);
 })();
+
+// ══════════════════════════════════════════════════════════════════════════
+// PORTAL DE EMPLEADOS — Lógica de modo / OTP / vista personal / solicitudes
+// ══════════════════════════════════════════════════════════════════════════
+
+function show(id){document.getElementById(id).classList.remove('hidden');}
+function hide(id){document.getElementById(id).classList.add('hidden');}
+function showInCard(cardId,errId,msg){const el=document.getElementById(errId);el.textContent=msg;el.style.display='block';}
+function hideErr(id){const el=document.getElementById(id);if(el)el.style.display='none';}
+
+// ── Mode selector ──────────────────────────────────────────────────────────
+function selectAdminMode(){
+  hide('portal-mode-selector');
+  show('portal-admin-login');
+  setTimeout(()=>document.getElementById('admin-pw-input').focus(),100);
+}
+function selectEmployeeMode(){
+  hide('portal-mode-selector');
+  show('portal-employee');
+  setTimeout(()=>document.getElementById('emp-email-input').focus(),100);
+}
+function backToModeSelector(){
+  ['portal-admin-login','portal-employee','emp-dashboard'].forEach(hide);
+  show('portal-mode-selector');
+}
+function togglePwVis(inputId,btn){
+  const inp=document.getElementById(inputId);
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}
+  else{inp.type='password';btn.textContent='👁';}
+}
+
+// ── Admin login ────────────────────────────────────────────────────────────
+function verifyAdminPw(){
+  const pw=document.getElementById('admin-pw-input').value;
+  if(pw===PORTAL_CONFIG.adminPassword){
+    hide('portal-admin-login');
+    sessionStorage.setItem('portal_mode','admin');
+    // Firebase sign-in en background (no bloquea la UI)
+    _fbSignIn().then(ok=>{
+      if(ok){
+        // Forzar guardado inmediato en Firebase con el estado local actual
+        const snap=buildSnapshot();
+        _fbGuardar(snap);
+      }
+    });
+  } else {
+    document.getElementById('admin-err').style.display='block';
+    document.getElementById('admin-pw-input').value='';
+    document.getElementById('admin-pw-input').focus();
+  }
+}
+
+// ── OTP: send ─────────────────────────────────────────────────────────────
+function sendPortalOTP(){
+  const emailInput = document.getElementById('emp-email-input');
+  const email = emailInput.value.trim().toLowerCase();
+  hideErr('email-err');
+  if(!email||!email.includes('@')){
+    showInCard('portal-step-email','email-err','Ingresa un correo válido.');
+    return;
+  }
+  const emp = findEmpByEmail(email);
+  if(!emp){
+    showInCard('portal-step-email','email-err',
+      'No encontramos este correo en el sistema. Verifica o contacta a Jamis Garzón.');
+    return;
+  }
+  if((emp.Estado||'activo')==='retirado'){
+    showInCard('portal-step-email','email-err',
+      'Este empleado aparece como retirado en el sistema.');
+    return;
+  }
+  const code = String(Math.floor(100000+Math.random()*900000));
+  const expires = Date.now() + 10*60*1000; // 10 min
+  _portalOTP = {code, email, empId: emp.id, expires};
+  sessionStorage.setItem('portal_otp', JSON.stringify(_portalOTP));
+
+  const btn = document.getElementById('btn-send-otp');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+
+  // Send via EmailJS
+  emailjs.init({publicKey: PORTAL_CONFIG.emailjs.publicKey});
+  emailjs.send(
+    PORTAL_CONFIG.emailjs.serviceId,
+    PORTAL_CONFIG.emailjs.otpTemplate,
+    {
+      to_email:      email,
+      to_name:       emp.Empleado.split(' ')[0].charAt(0)+emp.Empleado.split(' ')[0].slice(1).toLowerCase(),
+      otp_code:      code,
+      valid_minutes: '10'
+    }
+  ).then(()=>{
+    btn.disabled=false; btn.textContent='Enviar código de acceso';
+    // Transition to OTP step
+    hide('portal-step-email');
+    document.getElementById('otp-sent-to').textContent = 'Código enviado a ' + email;
+    document.getElementById('otp-resend-hint').textContent = 'reenviar código';
+    show('portal-step-otp');
+    document.getElementById('otp-input').focus();
+    startOTPTimer();
+  }).catch(err=>{
+    btn.disabled=false; btn.textContent='Enviar código de acceso';
+    console.error('EmailJS error:',err);
+    // Fallback: allow testing without real EmailJS by auto-filling (dev mode only)
+    if(PORTAL_CONFIG.emailjs.publicKey==='YOUR_EMAILJS_PUBLIC_KEY'){
+      console.warn('⚠️ EmailJS no configurado — modo demo: código =', code);
+      hide('portal-step-email');
+      document.getElementById('otp-sent-to').textContent = 'Código enviado a ' + email + ' [DEMO]';
+      document.getElementById('otp-resend-hint').textContent = 'reenviar código';
+      show('portal-step-otp');
+      document.getElementById('otp-input').value = code; // auto-fill en modo demo
+      document.getElementById('otp-input').focus();
+      startOTPTimer();
+    } else {
+      showInCard('portal-step-email','email-err',
+        'Error al enviar el código. Verifica la configuración de EmailJS.');
+    }
+  });
+}
+
+function startOTPTimer(){
+  clearInterval(_otpTimerInterval);
+  const el = document.getElementById('otp-timer');
+  function tick(){
+    if(!_portalOTP){clearInterval(_otpTimerInterval);return;}
+    const left = Math.max(0, _portalOTP.expires - Date.now());
+    const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+    el.textContent = m+':'+(s<10?'0':'')+s;
+    if(left===0){clearInterval(_otpTimerInterval);el.textContent='Expirado';}
+  }
+  tick();
+  _otpTimerInterval = setInterval(tick, 1000);
+}
+
+function backToEmailStep(){
+  hide('portal-step-otp');
+  show('portal-step-email');
+  hideErr('otp-err');
+  clearInterval(_otpTimerInterval);
+  _portalOTP = null;
+}
+
+// ── OTP: verify ────────────────────────────────────────────────────────────
+function verifyPortalOTP(){
+  const entered = document.getElementById('otp-input').value.trim();
+  hideErr('otp-err');
+  if(!_portalOTP){
+    showInCard('portal-step-otp','otp-err','El código expiró. Solicita uno nuevo.');
+    return;
+  }
+  if(Date.now() > _portalOTP.expires){
+    showInCard('portal-step-otp','otp-err','El código expiró. Haz clic en "← Cambiar correo" y solicita uno nuevo.');
+    return;
+  }
+  if(entered !== _portalOTP.code){
+    showInCard('portal-step-otp','otp-err','Código incorrecto. Verifica e intenta de nuevo.');
+    document.getElementById('otp-input').value='';
+    return;
+  }
+  // Correct — open employee dashboard
+  _currentEmpId = _portalOTP.empId;
+  sessionStorage.setItem('portal_mode','employee');
+  sessionStorage.setItem('portal_emp_id', String(_currentEmpId));
+  clearInterval(_otpTimerInterval);
+  _portalOTP = null;
+  hide('portal-employee');
+  renderEmployeeDashboard(_currentEmpId);
+  show('emp-dashboard');
+}
+
+// ── Employee Dashboard ─────────────────────────────────────────────────────
+function renderEmployeeDashboard(empId){
+  const base = empById(empId);
+  if(!base){document.getElementById('emp-profile-name').textContent='Empleado no encontrado';return;}
+  const d   = calcEmployee(base);
+  const ov  = overrides[base.id] || {};   // leer overrides directamente (fuente canónica)
+
+  // Header
+  document.getElementById('emp-hdr-date').textContent =
+    new Date().toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  // Profile
+  const parts = (base.Empleado||'').split(' ');
+  const initials = ((parts[0]||'')[0]||'') + ((parts[2]||parts[1]||'')[0]||'');
+  document.getElementById('emp-avatar').textContent = initials.toUpperCase();
+  document.getElementById('emp-profile-name').textContent =
+    base.Empleado.split(' ').map(w=>w.charAt(0)+w.slice(1).toLowerCase()).join(' ');
+  const vacRate = (base.Pais==='PAN' && base.TipoContrato!=='Contrato') ? 30 : 15;
+  document.getElementById('emp-profile-meta').textContent =
+    (base.Cargo||'') + ' · ' + (base.TipoContrato||'') +
+    (base.Pais==='PAN'?' · Panamá':'') + ' · Jefe: ' + (base.JefeDirecto||'—');
+
+  // ── Recalcular tomadas DIRECTAMENTE desde overrides (misma lógica que calcEmployee)
+  // Evita depender de d.TotalTomadas que puede quedar en 0 si overrides no cargó a tiempo
+  const sols_ley = (ov.solicitudes||[]).filter(s=>s.tipo==='ley');
+  function _vtAnio(baseDias, addOv, anio){
+    const solSum = sols_ley.filter(s=>s.anio===anio).reduce((a,s)=>a+s.dias,0);
+    return Math.max((baseDias||0)+(addOv||0), solSum);
+  }
+  const _vt22 = _vtAnio(base.VT22, ov.addVT22, 2022);
+  const _vt23 = _vtAnio(base.VT23, ov.addVT23, 2023);
+  const _vt24 = _vtAnio(base.VT24, ov.addVT24, 2024);
+  const _vt25 = _vtAnio(base.VT25, ov.addVT25, 2025);
+  const _vt26 = _vtAnio((base.VT26||0)+(ov.extraVac1||0), ov.addVT26, 2026);
+  const tomadas  = _vt22+_vt23+_vt24+_vt25+_vt26;
+  const ganadas  = d.DiasGanados1 || 0;
+  const saldoLey = Math.round((ganadas - tomadas)*100)/100;
+  const saldoLeal = d.AplicaLeal ? (d.DiasGanados2||0)-(d.DiasTomados2Actual||0) : null;
+
+  // ── KPI cards ────────────────────────────────────────────────────────────────
+  let kpis = `
+    <div class="emp-kpi">
+      <div class="emp-kpi-bar" style="background:#3B82F6"></div>
+      <div class="emp-kpi-label">Días ganados (Ley)</div>
+      <div class="emp-kpi-value neu">${fNum(ganadas)}</div>
+      <div class="emp-kpi-desc">Desde ${base.Inicio} · ${vacRate}d/año</div>
+    </div>
+    <div class="emp-kpi">
+      <div class="emp-kpi-bar" style="background:#64748B"></div>
+      <div class="emp-kpi-label">Días tomados (Ley)</div>
+      <div class="emp-kpi-value neu">${fNum(tomadas)}</div>
+      <div class="emp-kpi-desc">Acumulado desde ingreso</div>
+    </div>
+    <div class="emp-kpi">
+      <div class="emp-kpi-bar" style="background:${saldoLey>=0?'#16A34A':'#DC2626'}"></div>
+      <div class="emp-kpi-label">Saldo disponible (Ley)</div>
+      <div class="emp-kpi-value ${saldoLey>=0?'pos':'neg'}">${fNum(saldoLey)}</div>
+      <div class="emp-kpi-desc">${saldoLey>=0?'Días disponibles para tomar':'Vacaciones adelantadas'}</div>
+    </div>`;
+  if(d.AplicaLeal && saldoLeal!==null){
+    const sL = saldoLeal;
+    kpis += `
+    <div class="emp-kpi">
+      <div class="emp-kpi-bar" style="background:#D97706"></div>
+      <div class="emp-kpi-label">Días Leal ganados</div>
+      <div class="emp-kpi-value neu">${fNum(d.DiasGanados2||0)}</div>
+      <div class="emp-kpi-desc">Beneficio adicional Leal</div>
+    </div>
+    <div class="emp-kpi">
+      <div class="emp-kpi-bar" style="background:#64748B"></div>
+      <div class="emp-kpi-label">Días Leal tomados</div>
+      <div class="emp-kpi-value neu">${fNum(d.DiasTomados2Actual||0)}</div>
+      <div class="emp-kpi-desc">Histórico + registrados</div>
+    </div>
+    <div class="emp-kpi">
+      <div class="emp-kpi-bar" style="background:${sL>=0?'#D97706':'#DC2626'}"></div>
+      <div class="emp-kpi-label">Saldo Leal disponible</div>
+      <div class="emp-kpi-value ${sL>=0?'pos':'neg'}">${fNum(sL)}</div>
+      <div class="emp-kpi-desc">${sL>=0?'Días Leal por tomar':''}</div>
+    </div>`;
+  }
+  document.getElementById('emp-kpis').innerHTML = kpis;
+
+  // ── Historial por año — incluye detalle de solicitudes como hace el panel admin ──
+  const YEARS = [2022,2023,2024,2025,2026];
+  const vtByYear = {2022:_vt22,2023:_vt23,2024:_vt24,2025:_vt25,2026:_vt26};
+  let histRows = '';
+  YEARS.forEach(yr=>{
+    const total = vtByYear[yr];
+    const yearSols = sols_ley.filter(s=>s.anio===yr);
+    // Fila de total del año
+    histRows += `<tr>
+      <td><strong>${yr}</strong></td>
+      <td><strong>${fNum(total)}</strong> días</td>
+      <td style="color:var(--gy);font-size:11px;">${yr<2025?'Dato histórico':total>0?'Registrado':'Sin tomar'}</td>
+    </tr>`;
+    // Detalle de solicitudes del año (si las hay)
+    yearSols.forEach(s=>{
+      const fi = s.fi||'—'; const ff = s.ff||'—';
+      histRows += `<tr style="background:#f8fafc;">
+        <td style="padding-left:18px;font-size:11px;color:var(--gy);">↳ ${fi} → ${ff}</td>
+        <td style="font-size:11px;color:var(--gy);">${fNum(s.dias)}d</td>
+        <td style="font-size:11px;color:#3B82F6;">✓ Solicitud</td>
+      </tr>`;
+    });
+  });
+  document.getElementById('emp-hist-tbody').innerHTML = histRows;
+
+  // ── Leal section ────────────────────────────────────────────────────────────
+  if(d.AplicaLeal){
+    document.getElementById('emp-leal-section').style.display='block';
+    const lealRows = `
+      <tr><td>Histórico Leal (migrado)</td><td><strong>${fNum(d.DiasTomados2||0)}</strong> días</td></tr>
+      <tr><td>Vacaciones adicionales previas</td><td><strong>${fNum(ov.extraVac2||0)}</strong> días</td></tr>
+      <tr><td>Ajuste manual registrado</td><td><strong>${fNum(ov.addLeal||0)}</strong> días</td></tr>
+      <tr style="background:var(--lg)"><td><strong>Total Leal tomado</strong></td><td><strong>${fNum(d.DiasTomados2Actual||0)}</strong> días</td></tr>`;
+    document.getElementById('emp-leal-tbody').innerHTML = lealRows;
+  } else {
+    document.getElementById('emp-leal-section').style.display='none';
+  }
+
+  // Request form: show Leal option only if applies
+  const lealOpt = document.getElementById('req-leal-opt');
+  if(lealOpt) lealOpt.style.display = d.AplicaLeal ? '' : 'none';
+
+  // Store employee data for request form
+  window._empForRequest = {base, d};
+  hideErr('req-form-err');
+  hideErr('req-form-ok');
+  document.getElementById('req-form-ok').style.display='none';
+  document.getElementById('req-form-err').style.display='none';
+}
+
+function updateReqPreview(){
+  const tipo = document.getElementById('req-tipo').value;
+  const fi   = document.getElementById('req-fi').value;
+  const ff   = document.getElementById('req-ff').value;
+  const diasInput = document.getElementById('req-dias');
+  const prev = document.getElementById('req-preview');
+
+  // ── Auto-calcular días hábiles cuando fi y ff están completos ──
+  let autoHabiles = 0, autoCal = 0, autoFest = 0;
+  if(fi && ff && ff >= fi){
+    const base = window._empForRequest?.base;
+    const pais = base?.Pais || 'COL';
+    const res = diasHabiles(fi, ff, pais);
+    autoHabiles = res.habiles;
+    autoCal     = res.calendario||Math.round((new Date(ff)-new Date(fi))/86400000)+1;
+    autoFest    = res.festivos||0;
+    // Auto-llenar campo si está vacío o si el usuario no lo ha tocado manualmente
+    if(!diasInput._manuallyEdited){
+      diasInput.value = autoHabiles > 0 ? autoHabiles : '';
+    }
+  }
+
+  const dias = parseFloat(diasInput.value)||0;
+  if(!tipo||!dias||!fi){prev.style.display='none';return;}
+  const empName = window._empForRequest?.base?.Empleado||'—';
+  const d = window._empForRequest?.d;
+  const saldo = tipo==='ley' ? (d?.NetoVac1||0) : ((d?.DiasGanados2||0)-(d?.DiasTomados2Actual||0));
+  const after = saldo - dias;
+
+  const detalleCal = (autoHabiles > 0 && ff)
+    ? `<span style="font-size:10px;color:var(--gy);margin-top:3px;display:block">
+        📅 ${autoHabiles} días hábiles · ${autoCal} días calendario${autoFest>0?' · '+autoFest+' festivo(s)':''}
+       </span>`
+    : '';
+
+  prev.style.display='block';
+  prev.innerHTML = `<strong>Resumen de solicitud</strong>
+    <strong>${empName.split(' ').slice(0,2).join(' ')}</strong> · ${tipo==='ley'?'Vacaciones Ley':'Días adicionales Leal'}<br>
+    ${dias} día(s) · ${fi}${ff?' al '+ff:''}
+    ${detalleCal}
+    Saldo actual: <b>${fNum(saldo)}d</b> → después de solicitud: <b style="color:${after>=0?'var(--gr)':'var(--dr)'}">${fNum(after)}d</b>`;
+}
+
+function submitVacRequest(){
+  const tipo  = document.getElementById('req-tipo').value;
+  const dias  = parseFloat(document.getElementById('req-dias').value)||0;
+  const fi    = document.getElementById('req-fi').value;
+  const ff    = document.getElementById('req-ff').value;
+  const notas = document.getElementById('req-notas').value.trim();
+  const errEl = document.getElementById('req-form-err');
+  const okEl  = document.getElementById('req-form-ok');
+  errEl.style.display='none'; okEl.style.display='none';
+
+  if(!tipo){errEl.textContent='Selecciona el tipo de vacaciones.';errEl.style.display='block';return;}
+  if(!dias||dias<=0){errEl.textContent='Ingresa el número de días.';errEl.style.display='block';return;}
+  if(!fi){errEl.textContent='Ingresa la fecha de inicio.';errEl.style.display='block';return;}
+
+  const emp = window._empForRequest?.base;
+  const d   = window._empForRequest?.d;
+  if(!emp){errEl.textContent='Error: no se encontró el perfil del empleado.';errEl.style.display='block';return;}
+
+  const emailInfo = getEmailInfo(emp);
+  const managerEmail = emailInfo.manager || PORTAL_CONFIG.adminEmail;
+  const empFullName = emp.Empleado.split(' ').map(w=>w.charAt(0)+w.slice(1).toLowerCase()).join(' ');
+  const saldoActual = tipo==='ley' ? (d?.NetoVac1||0) : ((d?.DiasGanados2||0)-(d?.DiasTomados2Actual||0));
+  const saldoDespues = saldoActual - dias;
+  const tipoLabel = tipo==='ley' ? 'Vacaciones Ley' : 'Días adicionales Leal';
+  const btn = document.getElementById('req-submit-btn');
+  btn.disabled=true; btn.textContent='Enviando…';
+
+  emailjs.init({publicKey: PORTAL_CONFIG.emailjs.publicKey});
+  emailjs.send(
+    PORTAL_CONFIG.emailjs.serviceId,
+    PORTAL_CONFIG.emailjs.requestTemplate,
+    {
+      to_email:       managerEmail,
+      cc_email:       PORTAL_CONFIG.adminEmail,
+      employee_name:  empFullName,
+      employee_email: emailInfo.email||'',
+      employee_cargo: emp.Cargo||'',
+      tipo_vac:       tipoLabel,
+      dias_solicitados: String(dias),
+      fecha_inicio:   fi,
+      fecha_fin:      ff||'—',
+      notas:          notas||'Ninguna',
+      saldo_actual:   fNum(saldoActual),
+      saldo_despues:  fNum(saldoDespues),
+      fecha_solicitud: new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'})
+    }
+  ).then(()=>{
+    btn.disabled=false; btn.textContent='📤 Enviar solicitud a mi jefe';
+    okEl.textContent = '✅ Solicitud enviada correctamente. Tu jefe recibirá el correo en breve.';
+    okEl.style.display='block';
+    // Reset form
+    document.getElementById('req-tipo').value='';
+    const _rdias=document.getElementById('req-dias'); _rdias.value=''; _rdias._manuallyEdited=false;
+    document.getElementById('req-fi').value='';
+    document.getElementById('req-ff').value='';
+    document.getElementById('req-notas').value='';
+    document.getElementById('req-preview').style.display='none';
+  }).catch(err=>{
+    btn.disabled=false; btn.textContent='📤 Enviar solicitud a mi jefe';
+    console.error('EmailJS send error:',err);
+    if(PORTAL_CONFIG.emailjs.publicKey==='YOUR_EMAILJS_PUBLIC_KEY'){
+      // Demo mode
+      okEl.textContent = '✅ [DEMO] Solicitud simulada. Configura EmailJS para envíos reales.';
+      okEl.style.display='block';
+    } else {
+      errEl.textContent='Error al enviar. Contacta a Jamis Garzón directamente.';
+      errEl.style.display='block';
+    }
+  });
+}
+
+function empLogout(){
+  sessionStorage.removeItem('portal_mode');
+  sessionStorage.removeItem('portal_emp_id');
+  _currentEmpId=null;
+  hide('emp-dashboard');
+  hide('portal-employee');
+  // Reset email step
+  document.getElementById('emp-email-input').value='';
+  document.getElementById('otp-input').value='';
+  hide('portal-step-otp');
+  show('portal-step-email');
+  show('portal-mode-selector');
+}
+
+// ── Portal init: called from main init() ──────────────────────────────────
+function initPortal(){
+  const mode = sessionStorage.getItem('portal_mode');
+  if(mode==='admin'){
+    // Already authenticated — skip selector
+    hide('portal-mode-selector');
+    return;
+  }
+  if(mode==='employee'){
+    const empId = parseInt(sessionStorage.getItem('portal_emp_id')||'-1');
+    if(empId>=0){
+      _currentEmpId=empId;
+      hide('portal-mode-selector');
+      renderEmployeeDashboard(empId);
+      show('emp-dashboard');
+      return;
+    }
+  }
+  // Default: show mode selector
+  show('portal-mode-selector');
+}
+
+
 </script>
 
 <!-- ═══════════ TAB: PROYECCIÓN DIC-2026 ═══════════ -->
