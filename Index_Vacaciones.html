@@ -5414,18 +5414,19 @@ function sendPortalOTP(){
   const btn = document.getElementById('btn-send-otp');
   btn.disabled = true; btn.textContent = 'Enviando…';
 
-  // Send via SES SMTP (server.py /send-email)
+  // Send via EmailJS → SES SMTP (service_p88x4x5) — funciona desde GitHub Pages
   const _empFirstName = emp.Empleado.split(' ')[0].charAt(0).toUpperCase()+emp.Empleado.split(' ')[0].slice(1).toLowerCase();
-  fetch(window.location.origin+'/send-email',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      to:      email,
-      subject: 'Tu código de acceso — Portal Vacaciones',
-      text:    'Hola '+_empFirstName+',\n\nTu código de acceso al Portal de Vacaciones es:\n\n    '+code+'\n\nVálido por 10 minutos. No lo compartas con nadie.\n\n— Portal Vacaciones · Liberty'
-    })
-  }).then(r=>r.json()).then(data=>{
-    if(!data.ok) throw new Error(data.error||'Error al enviar');
+  emailjs.init({publicKey: PORTAL_CONFIG.emailjs.publicKey});
+  emailjs.send(
+    PORTAL_CONFIG.emailjs.serviceId,
+    PORTAL_CONFIG.emailjs.otpTemplate,
+    {
+      to_email:  email,
+      reply_to:  email,
+      subject:   'Tu código de acceso — Portal Vacaciones',
+      body:      'Hola '+_empFirstName+',\n\nTu código de acceso al Portal de Vacaciones es:\n\n    '+code+'\n\nVálido por 10 minutos. No lo compartas con nadie.\n\n— Portal Vacaciones · Liberty'
+    }
+  ).then(()=>{
     btn.disabled=false; btn.textContent='Enviar código de acceso';
     hide('portal-step-email');
     document.getElementById('otp-sent-to').textContent = 'Código enviado a ' + email;
@@ -5435,9 +5436,9 @@ function sendPortalOTP(){
     startOTPTimer();
   }).catch(err=>{
     btn.disabled=false; btn.textContent='Enviar código de acceso';
-    console.error('SES send error:',err);
+    console.error('EmailJS/SES error:',err);
     showInCard('portal-step-email','email-err',
-      'Error al enviar el código. Contacta a Jamis Garzón ('+err.message+').');
+      'Error al enviar el código. Contacta a Jamis Garzón.');
   });
 }
 
@@ -5744,17 +5745,18 @@ function submitVacRequest(){
     '',
     '¡Saludos!'
   ].join('\n');
-  fetch(window.location.origin+'/send-email',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      to:      managerEmail,
-      cc:      PORTAL_CONFIG.adminEmail,
-      subject: 'Nueva solicitud de vacaciones — '+empFullName,
-      text:    _bodyReq
-    })
-  }).then(r=>r.json()).then(data=>{
-    if(!data.ok) throw new Error(data.error||'Error al enviar');
+  emailjs.init({publicKey: PORTAL_CONFIG.emailjs.publicKey});
+  emailjs.send(
+    PORTAL_CONFIG.emailjs.serviceId,
+    PORTAL_CONFIG.emailjs.requestTemplate,
+    {
+      to_email:  managerEmail,
+      cc_email:  PORTAL_CONFIG.adminEmail,
+      reply_to:  emailInfo.email||PORTAL_CONFIG.adminEmail,
+      subject:   'Nueva solicitud de vacaciones — '+empFullName,
+      body:      _bodyReq
+    }
+  ).then(()=>{
     btn.disabled=false; btn.textContent='📤 Enviar solicitud a mi jefe';
     okEl.textContent = '✅ Solicitud enviada correctamente. Tu jefe recibirá el correo en breve.';
     okEl.style.display='block';
@@ -5798,17 +5800,17 @@ function submitVacRequest(){
         '',
         '— Portal Vacaciones · Liberty'
       ].filter(Boolean).join('\n');
-      fetch(window.location.origin+'/send-email',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          to:      emailInfo.email,
-          subject: '📋 Solicitud de vacaciones recibida',
-          text:    _bodyAcuse
-        })
-      }).then(function(r){ return r.json(); })
-        .then(function(d){ console.log('[Email] Acuse enviado a empleado', d.ok?'✓':'✗'); })
-        .catch(function(e){ console.warn('[Email] Error acuse empleado:', e); });
+      emailjs.send(
+        PORTAL_CONFIG.emailjs.serviceId,
+        PORTAL_CONFIG.emailjs.otpTemplate,
+        {
+          to_email: emailInfo.email,
+          reply_to: emailInfo.email,
+          subject:  '📋 Solicitud de vacaciones recibida',
+          body:     _bodyAcuse
+        }
+      ).then(function(){ console.log('[Email] Acuse enviado a empleado ✓'); })
+       .catch(function(e){ console.warn('[Email] Error acuse empleado:', e); });
     }
     // Reset form
     document.getElementById('req-tipo').value='';
@@ -5819,8 +5821,8 @@ function submitVacRequest(){
     document.getElementById('req-preview').style.display='none';
   }).catch(err=>{
     btn.disabled=false; btn.textContent='📤 Enviar solicitud a mi jefe';
-    console.error('SES send error:',err);
-    errEl.textContent='Error al enviar. Contacta a Jamis Garzón directamente ('+err.message+').';
+    console.error('EmailJS/SES send error:',err);
+    errEl.textContent='Error al enviar. Contacta a Jamis Garzón directamente.';
     errEl.style.display='block';
   });
 }
